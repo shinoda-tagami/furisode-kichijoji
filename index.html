@@ -1150,6 +1150,17 @@ function renderRegList(){
     c.appendChild(d);
   });
 }
+/* レンタル小物 空打ちバーコード（税抜価格。表示は×1.1の税込）*/
+const RENTAL_KOMONO_BC = {
+  juban:{label:"レンタル振袖長襦袢",code:"0000172624301",price:7700},
+  komonoset:{label:"振袖小物セット",code:"0000172624431",price:14300},
+  zori:{label:"レンタル草履バックセット",code:"0000172624400",price:6600},
+  shawl:{label:"レンタルショール",code:"0000172624424",price:2750}
+};
+function komonoDiff(r,label){
+  const k=((r.detail&&r.detail.komono)||[]).find(x=>x.label===label);
+  return k?(k.diff||0):0;
+}
 function showDetail(serial){
   const r=records.find(x=>x.serial===serial);if(!r)return;
   let body="";
@@ -1174,8 +1185,14 @@ function showDetail(serial){
     bcTitle="🏷 レジ用バーコード（加工）";
     bcHint="加工品は「お預かり（必須）」＋「加工内容」を続けてスキャン／入力してください。";
   }else{
-    SEIYAKU_COMMON.forEach(x=>bcList.push({label:x[0],code:x[1]}));
+    if(r.type.indexOf("レンタル")>=0){
+      bcList.push(RENTAL_KOMONO_BC.juban);
+      bcList.push(RENTAL_KOMONO_BC.komonoset);
+      if(komonoDiff(r,"草履バッグ")===0) bcList.push(RENTAL_KOMONO_BC.zori);
+      if(komonoDiff(r,"ショール")===0) bcList.push(RENTAL_KOMONO_BC.shawl);
+    }
     if(r.detail && r.detail.han>0) bcList.push({label:HANERI_BC.tsuke[0],code:HANERI_BC.tsuke[1]});
+    SEIYAKU_COMMON.forEach(x=>bcList.push({label:x[0],code:x[1]}));
     if(r.type.indexOf("プレタ")>=0) SEIYAKU_PRETA.forEach(x=>bcList.push({label:x[0],code:x[1]}));
     if(r.detail && r.detail.trouble>0) bcList.push({label:TROUBLE_PLUS[0],code:TROUBLE_PLUS[1]});
     bcTitle="🏷 レジ用バーコード（成約）";
@@ -1186,8 +1203,9 @@ function showDetail(serial){
       <p class="hint" style="margin-top:2px">${bcHint}</p>`;
     bcList.forEach(b=>{
       const oaz=b.oaz;
+      const priceTag=b.price?` <span style="font-size:12px;color:var(--pink-d)">¥${yen(b.price)}</span>`:"";
       body+=`<div style="text-align:center;margin:8px 0;padding:8px 6px;border:${oaz?'2px solid var(--gold)':'1px solid var(--line)'};border-radius:8px;background:${oaz?'var(--soft)':'#fff'}">
-        <div style="font-size:13px;font-weight:600;margin-bottom:2px">${oaz?'📌 ':''}${escapeHtml(b.label)}${oaz?' <span style="font-size:11px;color:var(--gold);font-weight:700">必須</span>':''}</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">${oaz?'📌 ':''}${escapeHtml(b.label)}${priceTag}${oaz?' <span style="font-size:11px;color:var(--gold);font-weight:700">必須</span>':''}</div>
         <svg class="bcimg" data-code="${escapeHtml(b.code)}"></svg>
         <div style="font-size:14px;color:var(--ink);letter-spacing:2px;font-family:monospace">${escapeHtml(b.code)}</div>
       </div>`;
