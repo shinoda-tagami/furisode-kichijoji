@@ -1039,7 +1039,11 @@ async function saveEstimate(status){
   if(state.plan==="mochikomi"){
     const c=calcMochi();
     rec.type="持込み（ママ振）";rec.total=c.total;
-    rec.detail={ parts:c.parts, barcodes:c.barcodes, discNote:$("mDiscNote").value, disc:c.disc };
+    rec.detail={
+      parts:c.parts.map(p=>({label:p[0],amt:p[1]})),
+      barcodes:c.barcodes.map(b=>({label:b[0],code:b[1],oaz:!!b[2]})),
+      discNote:$("mDiscNote").value, disc:c.disc
+    };
   }else if(state.plan==="purchase" || (state.plan==="rental" && state.rentalSub)){
     const key=activePlanKey();const c=calcSet();
     rec.type=PLANS[key].label;rec.total=c.total;
@@ -1119,7 +1123,7 @@ function showDetail(serial){
   const r=records.find(x=>x.serial===serial);if(!r)return;
   let body="";
   if(r.type.indexOf("持込み")>=0){
-    (r.detail.parts||[]).forEach(p=>body+=line(p[0],p[1]));
+    (r.detail.parts||[]).forEach(p=>body+=line(Array.isArray(p)?p[0]:p.label, Array.isArray(p)?p[1]:p.amt));
     if(r.detail.disc>0)body+=line("割引"+(r.detail.discNote?"（"+escapeHtml(r.detail.discNote)+"）":""),-r.detail.disc,true);
   }else{
     body+=line("基本セット",r.detail.basePrice);
@@ -1134,11 +1138,12 @@ function showDetail(serial){
     body+=`<div style="margin-top:16px;font-weight:700;color:var(--pink-d);font-size:14px">🏷 レジ用バーコード（加工）</div>
       <p class="hint" style="margin-top:2px">加工品は「お預かり（必須）」＋「加工内容」を続けてスキャン／入力してください。</p>`;
     r.detail.barcodes.forEach(b=>{
-      const oaz=(b[2]===true)||(b[0].indexOf("お預かり")>=0);
+      const label=Array.isArray(b)?b[0]:b.label, code=Array.isArray(b)?b[1]:b.code, flag=Array.isArray(b)?b[2]:b.oaz;
+      const oaz=(flag===true)||(label.indexOf("お預かり")>=0);
       body+=`<div style="text-align:center;margin:8px 0;padding:8px 6px;border:${oaz?'2px solid var(--gold)':'1px solid var(--line)'};border-radius:8px;background:${oaz?'var(--soft)':'#fff'}">
-        <div style="font-size:13px;font-weight:600;margin-bottom:2px">${oaz?'📌 ':''}${escapeHtml(b[0])}${oaz?' <span style="font-size:11px;color:var(--gold);font-weight:700">必須</span>':''}</div>
-        <svg class="bcimg" data-code="${escapeHtml(b[1])}"></svg>
-        <div style="font-size:14px;color:var(--ink);letter-spacing:2px;font-family:monospace">${escapeHtml(b[1])}</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">${oaz?'📌 ':''}${escapeHtml(label)}${oaz?' <span style="font-size:11px;color:var(--gold);font-weight:700">必須</span>':''}</div>
+        <svg class="bcimg" data-code="${escapeHtml(code)}"></svg>
+        <div style="font-size:14px;color:var(--ink);letter-spacing:2px;font-family:monospace">${escapeHtml(code)}</div>
       </div>`;
     });
   }
@@ -1190,7 +1195,7 @@ function showEstimateSheet(serial){
   closeModal();
   let rows="", totalLabel="合計（税込）";
   if(r.type.indexOf("持込み")>=0){
-    (d.parts||[]).forEach(p=>{ rows+=esRow(p[0],p[1]); });
+    (d.parts||[]).forEach(p=>{ rows+=esRow(Array.isArray(p)?p[0]:p.label, Array.isArray(p)?p[1]:p.amt); });
     if(d.disc>0)rows+=esRow("割引"+(d.discNote?"（"+d.discNote+"）":""),d.disc,true);
   }else{
     rows+=`<tr class="es-sub"><td colspan="2">① 基本セット</td></tr>`;
