@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>振袖見積システム｜コピス吉祥寺店</title>
+<style>
+:root{
+  --pink:#e58aa6; --pink-d:#c96684; --gold:#b8975a; --ink:#3a2e33;
+  --bg:#faf5f2; --card:#ffffff; --line:#e7dcd6; --muted:#8a7a80;
+  --green:#3f9e73; --red:#cf5b5b; --soft:#fbf1ec;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  background:var(--bg);color:var(--ink);font-size:16px;line-height:1.5}
+h1,h2,h3{margin:0;font-weight:700}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:10px}
+input,select{font-family:inherit;font-size:16px;color:var(--ink)}
+.hidden{display:none !important}
+
+/* ---------- Lock screen ---------- */
+#lock{position:fixed;inset:0;background:linear-gradient(160deg,#f6e2e8,#f5efe9);
+  display:flex;align-items:center;justify-content:center;z-index:100}
+.lock-card{background:#fff;border-radius:20px;padding:34px 30px;width:330px;max-width:88vw;
+  box-shadow:0 12px 40px rgba(150,90,110,.18);text-align:center}
+.lock-card .logo{font-size:15px;color:var(--gold);letter-spacing:2px;margin-bottom:4px}
+.lock-card h1{font-size:21px;margin-bottom:2px}
+.lock-card .sub{color:var(--muted);font-size:13px;margin-bottom:22px}
+.pin-display{font-size:30px;letter-spacing:12px;height:44px;color:var(--pink-d);margin-bottom:14px;font-weight:700}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.keypad button{background:var(--soft);color:var(--ink);font-size:22px;padding:16px 0;font-weight:600;
+  transition:.1s}
+.keypad button:active{background:var(--pink);color:#fff}
+.keypad .fn{background:#efe6e0;font-size:15px}
+.lock-err{color:var(--red);font-size:13px;height:18px;margin-top:10px}
+
+/* ---------- Top bar ---------- */
+#app{max-width:900px;margin:0 auto;padding:0 0 90px}
+.topbar{position:sticky;top:0;z-index:30;background:linear-gradient(120deg,var(--pink),var(--pink-d));
+  color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 3px 12px rgba(180,120,140,.25)}
+.topbar .store{font-size:13px;opacity:.9}
+.topbar h1{font-size:18px}
+.topbar .lockbtn{background:rgba(255,255,255,.2);color:#fff;padding:8px 12px;font-size:13px}
+.tabs{display:flex;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:53px;z-index:29}
+.tabs button{flex:1;background:#fff;color:var(--muted);padding:14px 0;font-size:15px;font-weight:600;
+  border-radius:0;border-bottom:3px solid transparent}
+.tabs button.active{color:var(--pink-d);border-bottom-color:var(--pink)}
+.subnav{display:flex;gap:8px;margin-bottom:14px}
+.subnav button{flex:1;background:#fff;color:var(--muted);padding:12px 0;font-size:15px;font-weight:700;
+  border:2px solid var(--line)}
+.subnav button.on{background:var(--pink);color:#fff;border-color:var(--pink-d)}
+.filterbtns{display:flex;gap:8px}
+.filterbtns button{flex:1;background:var(--soft);color:var(--muted);padding:11px 0;font-weight:600;font-size:14px;border:2px solid transparent}
+.filterbtns button.on{background:var(--gold);color:#fff;border-color:#96793f}
+
+/* ---------- Cards / form ---------- */
+.wrap{padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h2{font-size:15px;color:var(--pink-d);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h2 .no{background:var(--pink);color:#fff;width:24px;height:24px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:none}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+.field input[type=text],.field input[type=date],.field input[type=number],.field select{
+  width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.field input:focus,.field select:focus{outline:none;border-color:var(--pink)}
+.row2{display:flex;gap:10px}.row2>*{flex:1}
+
+.segbtns{display:flex;gap:8px;flex-wrap:wrap}
+.segbtns button{flex:1;min-width:90px;background:var(--soft);color:var(--ink);padding:14px 6px;font-weight:600;
+  border:2px solid transparent;font-size:15px}
+.segbtns button.on{background:var(--pink);color:#fff;border-color:var(--pink-d)}
+.subseg button{background:#f1ece8}
+.subseg button.on{background:var(--gold);border-color:#96793f;color:#fff}
+
+/* komono diff table */
+.ktable{width:100%;border-collapse:collapse;font-size:14px}
+.ktable th{background:var(--soft);color:var(--muted);font-weight:600;font-size:12px;padding:8px 6px;text-align:center}
+.ktable td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}
+.ktable td.name{text-align:left;font-weight:600;white-space:nowrap;padding-left:2px}
+.ktable input{width:100%;max-width:110px;padding:9px 6px;border:1px solid var(--line);border-radius:8px;text-align:right}
+.ktable .diff{font-weight:700;color:var(--pink-d);white-space:nowrap}
+.ktable .diff.zero{color:var(--muted);font-weight:400}
+.hint{font-size:12px;color:var(--muted);margin-top:2px}
+
+.opt-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.opt-row:last-child{border-bottom:none}
+.opt-row .lbl{font-weight:600;font-size:14px}
+.opt-row .lbl small{display:block;color:var(--muted);font-weight:400;font-size:12px}
+.toggle{display:flex;gap:6px}
+.toggle button{background:#f1ece8;color:var(--muted);padding:8px 14px;font-size:13px;font-weight:600}
+.toggle button.on{background:var(--green);color:#fff}
+.toggle button.on.off{background:#c9bdb6}
+
+/* processing checklist (mochikomi) */
+.kako-grid{display:grid;grid-template-columns:1fr;gap:6px}
+.kako-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.kako-item.on{background:var(--soft);border-color:var(--pink)}
+.kako-item input[type=checkbox]{width:20px;height:20px;flex:none;accent-color:var(--pink-d)}
+.kako-item .kn{flex:1;font-size:14px}
+.kako-item input[type=number]{width:96px;padding:7px 6px;border:1px solid var(--line);border-radius:7px;text-align:right}
+
+/* total bar */
+.totalbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);
+  padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:40;
+  box-shadow:0 -3px 14px rgba(0,0,0,.06);max-width:900px;margin:0 auto}
+.totalbar .tt{font-size:13px;color:var(--muted)}
+.totalbar .tv{font-size:26px;font-weight:800;color:var(--pink-d)}
+.totalbar .yen{font-size:15px;margin-left:2px}
+.btn-primary{background:var(--pink);color:#fff;padding:14px 20px;font-size:15px;font-weight:700}
+.btn-primary:active{background:var(--pink-d)}
+.btn-ghost{background:#efe6e0;color:var(--ink);padding:12px 16px;font-weight:600;font-size:14px}
+
+.summary-line{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.summary-line.big{font-size:17px;font-weight:800;color:var(--pink-d);border-bottom:none;padding-top:12px}
+.summary-line .minus{color:var(--red)}
+
+/* register list */
+.searchbar{display:flex;gap:8px;margin-bottom:12px}
+.searchbar input{flex:1;padding:11px 12px;border:1px solid var(--line);border-radius:9px}
+.rec{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rec .rc-l .no{font-size:12px;color:var(--gold);font-weight:700}
+.rec .rc-l .nm{font-size:16px;font-weight:700}
+.rec .rc-l .meta{font-size:12px;color:var(--muted)}
+.rec .rc-r{text-align:right}
+.rec .rc-r .amt{font-size:18px;font-weight:800;color:var(--pink-d)}
+.rec .rc-r .tag{display:inline-block;font-size:11px;background:var(--soft);color:var(--pink-d);
+  padding:2px 8px;border-radius:20px;margin-bottom:3px}
+.empty{text-align:center;color:var(--muted);padding:40px 0}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(40,25,30,.45);z-index:60;display:flex;
+  align-items:flex-start;justify-content:center;padding:20px;overflow:auto}
+.modal-card{background:#fff;border-radius:16px;max-width:560px;width:100%;padding:20px;margin:auto}
+.modal-card h2{font-size:18px;color:var(--pink-d);margin-bottom:4px}
+.modal-actions{display:flex;gap:10px;margin-top:16px}
+.modal-actions button{flex:1;padding:13px}
+.detail-head{background:var(--soft);border-radius:10px;padding:12px;margin-bottom:12px;font-size:14px}
+.detail-head b{color:var(--pink-d)}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
+  padding:12px 22px;border-radius:30px;font-size:14px;z-index:80;opacity:0;transition:.3s;pointer-events:none}
+.toast.show{opacity:1}
+@media print{
+  body{background:#fff}
+  #lock,#app{display:none !important}
+  #modalRoot .modal{position:static;inset:auto;background:#fff;padding:0;display:block;overflow:visible}
+  #modalRoot .modal-card{box-shadow:none;max-width:100% !important;margin:0;padding:0}
+  .no-print{display:none !important}
+  #imgOverlay{display:none !important}
+  .card{break-inside:avoid}
+}
+/* ---- 見積書（お客様向け） ---- */
+.es-wrap{background:#fff;color:#2a2226;padding:20px 22px;font-size:13px}
+.es-head{text-align:center;border-bottom:2px solid var(--pink);padding-bottom:10px;margin-bottom:14px}
+.es-brand{font-size:12px;letter-spacing:3px;color:var(--gold)}
+.es-title{font-size:24px;font-weight:800;letter-spacing:6px;color:var(--pink-d);margin:2px 0}
+.es-store{font-size:13px;color:var(--muted)}
+.es-meta{width:100%;border-collapse:collapse;margin-bottom:12px}
+.es-meta th{width:96px;text-align:left;background:var(--soft);color:var(--muted);font-weight:600;padding:6px 10px;border:1px solid var(--line);font-size:12px}
+.es-meta td{padding:6px 10px;border:1px solid var(--line)}
+.es-items{width:100%;border-collapse:collapse}
+.es-items thead th{background:var(--pink);color:#fff;padding:8px 10px;text-align:left;font-size:12px}
+.es-items thead th:last-child{text-align:right}
+.es-items tbody td{padding:8px 10px;border-bottom:1px solid var(--line)}
+.es-items .es-amt{text-align:right;white-space:nowrap}
+.es-items .es-amt.minus{color:var(--red)}
+.es-items tfoot td{font-size:17px;font-weight:800;color:var(--pink-d);border-top:2px solid var(--pink);padding:10px}
+.es-items tfoot td:last-child{text-align:right}
+.es-sub{background:var(--soft);font-weight:700;color:var(--pink-d);font-size:12px}
+.es-note{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<!-- ============ LOCK ============ -->
+<div id="lock">
+  <div class="lock-card">
+    <div class="logo">MK STYLE</div>
+    <h1>振袖見積システム</h1>
+    <div class="sub">コピス吉祥寺店</div>
+    <div class="pin-display" id="pinDisp"></div>
+    <div class="keypad" id="keypad"></div>
+    <div class="lock-err" id="lockErr"></div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="hidden">
+  <div class="topbar">
+    <div>
+      <div class="store">コピス吉祥寺店</div>
+      <h1>振袖見積システム</h1>
+    </div>
+    <button class="lockbtn" onclick="lockApp()">🔒 ロック</button>
+  </div>
+  <div class="tabs">
+    <button id="tabSales" class="active" onclick="switchTab('sales')">👗 販売員画面</button>
+    <button id="tabReg" onclick="switchTab('reg')">🧾 レジ画面</button>
+  </div>
+
+  <!-- ---------- SALES ---------- -->
+  <div id="viewSales" class="wrap">
+    <div class="subnav">
+      <button id="snNew" class="on" onclick="salesMode('new')">✏️ 新規登録</button>
+      <button id="snReview" onclick="salesMode('review')">📋 内容確認</button>
+    </div>
+
+    <div id="salesNew">
+    <div class="card">
+      <h2><span class="no">1</span>お客様情報</h2>
+      <div class="row2">
+        <div class="field"><label>日付</label><input type="date" id="fDate"></div>
+        <div class="field"><label>通し番号（自動）</label><input type="text" id="fSerial" readonly></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>担当（販売員）</label><input type="text" id="fStaff" placeholder="担当者名"></div>
+        <div class="field"><label>お客様名</label><input type="text" id="fCustomer" placeholder="お客様名"></div>
+      </div>
+      <div class="field"><label>見積有効期限（手入力）</label><input type="text" id="fExpiry" placeholder="例）2026年8月31日まで"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="no">2</span>プラン区分</h2>
+      <div class="segbtns" id="planSeg">
+        <button data-plan="purchase" onclick="setPlan('purchase')">購入</button>
+        <button data-plan="rental" onclick="setPlan('rental')">レンタル</button>
+        <button data-plan="mochikomi" onclick="setPlan('mochikomi')">持込み（ママ振）</button>
+      </div>
+      <div id="rentalSubWrap" class="hidden" style="margin-top:12px">
+        <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:6px">レンタル種別</label>
+        <div class="segbtns subseg" id="rentalSub">
+          <button data-sub="rental_preta" onclick="setRentalSub('rental_preta')">プレタレンタル</button>
+          <button data-sub="rental_order" onclick="setRentalSub('rental_order')">セミオーダーレンタル</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PURCHASE / RENTAL FLOW ===== -->
+    <div id="setFlow" class="hidden">
+      <div class="card">
+        <h2><span class="no">3</span>基本セット金額（振袖グレード）</h2>
+        <div class="field">
+          <label>グレード選択（プルダウン）</label>
+          <select id="gradeSelect" onchange="onGradeSelect()"></select>
+        </div>
+        <div class="field">
+          <label>基本セット金額（手入力で修正可）</label>
+          <input type="number" id="basePrice" inputmode="numeric" oninput="calcSet()">
+          <div class="hint" id="planNote"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="no">4</span>コーディネート小物（差額計算）</h2>
+        <p class="hint" style="margin-top:-6px;margin-bottom:8px">
+          セット金額内なら差額¥0。上回る場合のみ差額を頂戴します。基準額は修正可能です。</p>
+        <table class="ktable">
+          <thead><tr><th style="text-align:left">品目</th><th>コーデ金額</th><th>基準（セット）</th><th>差額</th></tr></thead>
+          <tbody id="komonoBody"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2><span class="no">5</span>オプション</h2>
+        <div class="opt-row">
+          <div class="lbl">刺繍半衿 <small>セット外。金額を全額頂戴します</small></div>
+          <input type="number" id="optShishu" inputmode="numeric" style="width:120px;padding:9px;border:1px solid var(--line);border-radius:8px;text-align:right" placeholder="0" oninput="calcSet()">
+        </div>
+        <div class="opt-row">
+          <div class="lbl">半衿付け代 <small>一律 ¥3,300</small></div>
+          <div class="toggle" id="tgHan"><button class="on off" onclick="tog('optHan',false)">不要</button><button onclick="tog('optHan',true)">必要</button></div>
+        </div>
+        <div class="opt-row" id="troubleRow">
+          <div class="lbl">トラブルサポート <small>レンタル保険 一律 ¥5,500</small></div>
+          <div class="toggle" id="tgTrouble"><button class="on off" onclick="tog('optTrouble',false)">不要</button><button onclick="tog('optTrouble',true)">必要</button></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="no">6</span>割引</h2>
+        <div class="row2">
+          <div class="field"><label>割引内容（適用理由）</label><input type="text" id="discNote" placeholder="例）ご紹介割引"></div>
+          <div class="field"><label>割引額</label><input type="number" id="discAmt" inputmode="numeric" placeholder="0" oninput="calcSet()"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>お見積り内訳</h2>
+        <div id="setSummary"></div>
+      </div>
+    </div>
+
+    <!-- ===== MOCHIKOMI FLOW ===== -->
+    <div id="mochiFlow" class="hidden">
+      <div class="card">
+        <h2><span class="no">3</span>振袖（持ち込み）の加工</h2>
+        <p class="hint" style="margin-top:-6px">加工の種類を選び、項目にチェック。金額は修正できます。</p>
+        <div class="segbtns subseg" id="furisodeCat"></div>
+        <div class="kako-grid" id="kakoFurisode" style="margin-top:10px"></div>
+        <div class="kako-grid" id="shimiFurisode" style="margin-top:6px"></div>
+        <div style="font-size:12px;color:var(--gold);font-weight:600;margin-top:10px">その他の加工（自由入力）</div>
+        <div class="kako-grid" id="freeFurisode" style="margin-top:6px"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="no">4</span>帯</h2>
+        <div class="segbtns" id="obiSeg" style="margin-bottom:10px">
+          <button data-obi="purchase" onclick="setObi('purchase')">購入</button>
+          <button data-obi="rental" onclick="setObi('rental')">レンタル</button>
+          <button data-obi="mochi" onclick="setObi('mochi')">持ち込み</button>
+        </div>
+        <div id="obiAmtWrap" class="field hidden"><label>金額</label>
+          <input type="number" id="obiAmt" inputmode="numeric" placeholder="0" oninput="calcMochi()"></div>
+        <div id="obiKakoWrap" class="hidden">
+          <p class="hint">お手持ち帯の加工</p>
+          <div class="segbtns subseg" id="obiCat"></div>
+          <div class="kako-grid" id="kakoObi" style="margin-top:10px"></div>
+          <div class="kako-grid" id="shimiObi" style="margin-top:6px"></div>
+          <div style="font-size:12px;color:var(--gold);font-weight:600;margin-top:10px">その他の加工（自由入力）</div>
+          <div class="kako-grid" id="freeObi" style="margin-top:6px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="no">5</span>長襦袢</h2>
+        <div class="segbtns" id="jubanSeg" style="margin-bottom:10px">
+          <button data-j="purchase" onclick="setJuban('purchase')">購入</button>
+          <button data-j="rental" onclick="setJuban('rental')">レンタル</button>
+          <button data-j="mochi" onclick="setJuban('mochi')">持ち込み</button>
+        </div>
+        <div id="jubanAmtWrap" class="field hidden"><label>金額</label>
+          <input type="number" id="jubanAmt" inputmode="numeric" placeholder="0" oninput="calcMochi()"></div>
+        <div id="jubanKakoWrap" class="hidden">
+          <p class="hint">お手持ち長襦袢の加工</p>
+          <div class="segbtns subseg" id="jubanCat"></div>
+          <div class="kako-grid" id="kakoJuban" style="margin-top:10px"></div>
+          <div class="kako-grid" id="shimiJuban" style="margin-top:6px"></div>
+          <div style="font-size:12px;color:var(--gold);font-weight:600;margin-top:10px">その他の加工（自由入力）</div>
+          <div class="kako-grid" id="freeJuban" style="margin-top:6px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="no">6</span>半衿・刺繍衿</h2>
+        <div class="segbtns" id="hanSeg">
+          <button data-h="none" onclick="setHan('none')">なし</button>
+          <button data-h="tsuke" onclick="setHan('tsuke')">半衿付け（¥3,300）</button>
+          <button data-h="kokan" onclick="setHan('kokan')">半衿交換（¥5,500）</button>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label>刺繍衿（本体）金額 ／ お買上げ・全額加算</label>
+          <input type="number" id="mShishu" inputmode="numeric" placeholder="0" oninput="calcMochi()">
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="no">7</span>コーディネート小物</h2>
+        <p class="hint" style="margin-top:-6px">帯締め・帯揚げ・重ね衿・草履バッグ・ショール（金額入力で加算）</p>
+        <div id="mochiKomonoBody"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="no">8</span>和装小物</h2>
+        <div class="kako-grid" id="wasouSetWrap"></div>
+        <div style="font-size:12px;color:var(--gold);font-weight:600;margin-top:10px">その他の和装小物（自由入力）</div>
+        <div class="kako-grid" id="wasouFree" style="margin-top:6px"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="no">9</span>割引</h2>
+        <div class="row2">
+          <div class="field"><label>割引内容</label><input type="text" id="mDiscNote" placeholder="例）ご紹介割引"></div>
+          <div class="field"><label>割引額</label><input type="number" id="mDiscAmt" inputmode="numeric" placeholder="0" oninput="calcMochi()"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>お見積り内訳</h2>
+        <div id="mochiSummary"></div>
+      </div>
+    </div>
+    </div><!-- /salesNew -->
+
+    <div id="salesReview" class="hidden">
+      <div class="card">
+        <h2>内容確認</h2>
+        <p class="hint" style="margin-top:-6px">登録済み・下書きの見積りを確認できます。タップで詳細・編集。</p>
+        <div class="filterbtns" style="margin-top:8px">
+          <button id="rfReg" class="on" onclick="setReviewFilter('registered')">登録済み</button>
+          <button id="rfDraft" onclick="setReviewFilter('draft')">下書き</button>
+        </div>
+        <div class="searchbar" style="margin-top:12px">
+          <input type="text" id="reviewSearch" placeholder="🔍 お客様名 / 通し番号 / 日付" oninput="renderReviewList()">
+        </div>
+        <div id="reviewList"></div>
+      </div>
+    </div>
+
+  </div><!-- /viewSales -->
+
+  <!-- ---------- REGISTER ---------- -->
+  <div id="viewReg" class="wrap hidden">
+    <div class="card">
+      <h2>保存済み見積り一覧</h2>
+      <p class="hint" style="margin-top:-6px">日付・お客様名・通し番号で検索できます</p>
+      <div class="searchbar">
+        <input type="text" id="regSearch" placeholder="🔍 お客様名 / 通し番号 / 日付" oninput="renderRegList()">
+      </div>
+      <div id="regList"></div>
+    </div>
+  </div>
+
+  <!-- total bar -->
+  <div class="totalbar no-print" id="totalBar">
+    <div><div class="tt">合計金額（税込）</div><div class="tv"><span class="yen">¥</span><span id="totalVal">0</span></div></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-ghost" onclick="resetForm()">クリア</button>
+      <button class="btn-ghost" onclick="saveEstimate('draft')">📝 下書き</button>
+      <button class="btn-primary" onclick="saveEstimate('registered')">✅ 登録</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="modalRoot"></div>
+
+<!-- Firebase SDK (別iPad間データ共有用) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!-- 見積書の画像化 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+"use strict";
+/* ============================================================
+   設定
+============================================================ */
+const STORE = { name:"コピス吉祥寺店", code:"KPS" };
+const PASSWORD = "maruyama08";   // ★パスワード（コピス吉祥寺店）
+
+/* ============================================================
+   Firebase 設定（別iPad間でデータ共有する場合に入力）
+   前回のクリーニングシステムと同じFirebaseプロジェクトのWeb設定を貼り付けてください。
+   （Firebaseコンソール → プロジェクトの設定 → マイアプリ → Web の firebaseConfig）
+   ※ここが空のままでも「このiPad内保存」で動作します（共有はされません）。
+============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+
+const yen = n => (Math.round(n)||0).toLocaleString("ja-JP");
+const $ = id => document.getElementById(id);
+
+/* 小物品目 */
+const KOMONO = [
+  {key:"obi",label:"袋帯"},{key:"juban",label:"長襦袢"},{key:"obijime",label:"帯締め"},
+  {key:"obiage",label:"帯揚げ"},{key:"kasane",label:"重ね衿"},{key:"zori",label:"草履バッグ"},
+  {key:"shawl",label:"ショール"},{key:"komono",label:"着付小物セット"}
+];
+
+/* プラン定義（2026.1改定価格） */
+const PLANS = {
+  purchase:{
+    label:"購入", trouble:false,
+    /* グレードごとに袋帯・長襦袢の基準額が変動 */
+    grades:[
+      {price:165000, obi:22000,  juban:15400},
+      {price:220000, obi:22000,  juban:15400},
+      {price:275000, obi:66000,  juban:15400},
+      {price:330000, obi:66000,  juban:15400},
+      {price:385000, obi:88000,  juban:59400},
+      {price:440000, obi:88000,  juban:59400},
+      {price:495000, obi:110000, juban:59400},
+      {price:550000, obi:110000, juban:59400},
+      {price:605000, obi:110000, juban:59400},
+      {price:660000, obi:110000, juban:59400}
+    ],
+    base:{obi:22000,juban:15400,obijime:6600,obiage:7700,kasane:5500,zori:13200,shawl:5500,komono:14300}
+  },
+  rental_order:{
+    label:"レンタル（セミオーダー）", trouble:true,
+    grades:[132000,165000,198000,231000,264000,297000,330000,363000].map(p=>({price:p})),
+    base:{obi:22000,juban:7700,obijime:2200,obiage:3850,kasane:1100,zori:6600,shawl:2750,komono:14300}
+  },
+  rental_preta:{
+    label:"レンタル（プレタ）", trouble:true,
+    grades:[88000,110000,132000,154000,176000,198000,220000,242000,264000].map(p=>({price:p})),
+    base:{obi:22000,juban:7700,obijime:2200,obiage:3850,kasane:1100,zori:6600,shawl:2750,komono:14300}
+  }
+};
+
+/* 持込み加工（2026.1改定） */
+/* 持込み加工（きものブレイン 2025.10改定・税込） カテゴリ別 */
+const KAKO = {
+  furisode:{
+    "仕立て直し":[["解き",3960],["洗い張り",8360],["胴裏",22000],["八掛",18700],["国内仕立て",104500],["海外仕立て",44000],["ガード加工",17600]],
+    "部分直し":[["身丈直し（内揚）",50600],["身丈直し（裾）",25300],["袖丈直し",17600],["袖作り直し",27500],["裄直し（肩巾・袖巾）",19800],["裄直し（肩巾）",14300],["裄直し（袖巾）",14300],["胴裏取り換え",49500],["胴裏",22000],["八掛取り換え",46200],["八掛",18700],["スジけし",0]],
+    "洗い":[["丸洗い",9900],["汗抜き",7700]]
+  },
+  obi:{
+    "仕立て直し":[["解き",1100],["洗い張り",5500],["帯芯",3300],["丸巻きから仕立て",13750],["ガード加工",13200],["スジけし",0]],
+    "洗い":[["丸洗い",6600],["汗抜き",3300]]
+  },
+  juban:{
+    "仕立て直し":[["解き",3300],["洗い張り",4400],["衿芯",880],["居敷当",6600],["国内仕立て",50600],["海外仕立て",25300],["ガード加工",14300]],
+    "部分直し":[["身丈直し（内揚）",41800],["身丈直し（裾）",20900],["袖丈直し",14300],["袖作り直し",22000],["裄直し（肩巾・袖巾）",16500],["裄直し（肩巾）",13200],["裄直し（袖巾）",13200],["地衿交換",14300],["スジけし",0]],
+    "洗い":[["丸洗い",5500],["汗抜き",7700]]
+  }
+};
+const SHIMI_LABEL="しみ抜き・工芸修正（見積り）";  /* どの加工でも共通で選べる */
+const MOCHI_KOMONO=[
+  {key:"obijime",label:"帯締め"},{key:"obiage",label:"帯揚げ"},{key:"kasane",label:"重ね衿"},
+  {key:"zori",label:"草履バッグ"},{key:"shawl",label:"ショール"}
+];
+const KOMONO_SET_PRICE=14300;  /* 和装小物セット標準額 */
+const HAN_PRICE={none:0,tsuke:3300,kokan:5500};
+const HAN_LABEL={none:"なし",tsuke:"半衿付け",kokan:"半衿交換"};
+
+/* ============================================================
+   状態
+============================================================ */
+let state = {};
+function freshKako(){
+  const mk={}; MOCHI_KOMONO.forEach(k=>mk[k.key]="mochi");
+  return {
+    furisode:{cat:null,sel:{},free:[]}, obi:{cat:null,sel:{},free:[]}, juban:{cat:null,sel:{},free:[]}, mk:mk
+  };
+}
+function freshState(){
+  state = {
+    plan:null, rentalSub:null,
+    tog:{optHan:false,optTrouble:false},
+    obi:null, juban:null, han:"none",
+    kako:freshKako(),
+    wasou:{setSel:{checked:false,amt:KOMONO_SET_PRICE}, free:[]},
+    editId:null
+  };
+}
+freshState();
+
+/* ============================================================
+   ロック画面
+============================================================ */
+let pin="";
+function buildKeypad(){
+  const kp=$("keypad");
+  const keys=["1","2","3","4","5","6","7","8","9","clr","0","del"];
+  kp.innerHTML="";
+  keys.forEach(k=>{
+    const b=document.createElement("button");
+    if(k==="clr"){b.textContent="C";b.className="fn";b.onclick=()=>{pin="";updPin();}}
+    else if(k==="del"){b.textContent="⌫";b.className="fn";b.onclick=()=>{pin=pin.slice(0,-1);updPin();}}
+    else{b.textContent=k;b.onclick=()=>{if(pin.length<8){pin+=k;updPin();}}}
+    kp.appendChild(b);
+  });
+}
+function updPin(){
+  $("pinDisp").textContent="•".repeat(pin.length);
+  $("lockErr").textContent="";
+  if(pin.length>=PASSWORD.length){
+    if(pin===PASSWORD){unlockApp();}
+    else{$("lockErr").textContent="パスワードが違います";pin="";setTimeout(updPin,600);
+      $("pinDisp").textContent="";}
+  }
+}
+function unlockApp(){pin="";$("lock").classList.add("hidden");$("app").classList.remove("hidden");initForm();}
+function lockApp(){pin="";$("pinDisp").textContent="";$("lock").classList.remove("hidden");$("app").classList.add("hidden");}
+
+/* ============================================================
+   タブ
+============================================================ */
+let salesView="new";
+let reviewFilter="registered";
+function switchTab(t){
+  const sales=t==="sales";
+  $("viewSales").classList.toggle("hidden",!sales);
+  $("viewReg").classList.toggle("hidden",sales);
+  $("tabSales").classList.toggle("active",sales);
+  $("tabReg").classList.toggle("active",!sales);
+  if(sales) salesMode(salesView); else renderRegList();
+  updateTotalBar();
+}
+function salesMode(m){
+  salesView=m;
+  $("salesNew").classList.toggle("hidden",m!=="new");
+  $("salesReview").classList.toggle("hidden",m!=="review");
+  $("snNew").classList.toggle("on",m==="new");
+  $("snReview").classList.toggle("on",m==="review");
+  if(m==="review") renderReviewList();
+  updateTotalBar();
+}
+function updateTotalBar(){
+  const show=!$("viewSales").classList.contains("hidden") && salesView==="new";
+  $("totalBar").style.display=show?"flex":"none";
+}
+function recStatus(r){ return r.status==="draft"?"draft":"registered"; }
+function setReviewFilter(f){
+  reviewFilter=f;
+  $("rfReg").classList.toggle("on",f==="registered");
+  $("rfDraft").classList.toggle("on",f==="draft");
+  renderReviewList();
+}
+function renderReviewList(){
+  if(!useFB) records=loadAllLocal().sort((a,b)=>b.createdAt-a.createdAt);
+  const q=($("reviewSearch").value||"").trim().toLowerCase();
+  let all=records.filter(r=>recStatus(r)===reviewFilter);
+  if(q)all=all.filter(r=>
+    (r.customer||"").toLowerCase().includes(q)||
+    (r.serial||"").toLowerCase().includes(q)||
+    (r.date||"").includes(q));
+  const c=$("reviewList");
+  if(all.length===0){c.innerHTML=`<div class="empty">${reviewFilter==="draft"?"下書き":"登録済み"}の見積りはありません</div>`;return;}
+  c.innerHTML="";
+  all.forEach(r=>{
+    const d=document.createElement("div");d.className="rec";
+    d.innerHTML=`<div class="rc-l">
+        <div class="no">${r.serial}</div>
+        <div class="nm">${escapeHtml(r.customer)} 様</div>
+        <div class="meta">${r.date}${r.staff?"｜担当 "+escapeHtml(r.staff):""}</div>
+      </div>
+      <div class="rc-r"><div class="tag">${r.type}</div><div class="amt">¥${yen(r.total)}</div></div>`;
+    d.onclick=()=>showDetail(r.serial);
+    c.appendChild(d);
+  });
+}
+
+/* ============================================================
+   初期化
+============================================================ */
+function initForm(){
+  $("fDate").value=new Date().toISOString().slice(0,10);
+  updateSerialField();
+  buildKomonoRows();
+  buildKakoLists();
+  buildMochiKomono();
+  buildWasou();
+}
+function resetForm(){
+  if(!confirm("入力内容をクリアしますか？"))return;
+  freshState();
+  ["fStaff","fCustomer","fExpiry","basePrice","optShishu","discNote","discAmt",
+   "obiAmt","jubanAmt","mDiscNote","mDiscAmt","mShishu"].forEach(id=>{if($(id))$(id).value="";});
+  document.querySelectorAll("#planSeg button,#rentalSub button,#obiSeg button,#jubanSeg button,#hanSeg button")
+    .forEach(b=>b.classList.remove("on"));
+  $("rentalSubWrap").classList.add("hidden");
+  $("setFlow").classList.add("hidden");$("mochiFlow").classList.add("hidden");
+  $("fDate").value=new Date().toISOString().slice(0,10);
+  updateSerialField();
+  buildKomonoRows();buildKakoLists();buildMochiKomono();buildWasou();
+  resetTogUI();setHan("none");
+  $("totalVal").textContent="0";
+  toast("クリアしました");
+}
+function resetTogUI(){
+  ["tgHan","tgTrouble"].forEach(id=>{
+    const t=$(id);if(!t)return;
+    t.children[0].classList.add("on","off");t.children[1].classList.remove("on");
+  });
+}
+
+/* ============================================================
+   プラン選択
+============================================================ */
+function setPlan(p){
+  state.plan=p;state.rentalSub=null;
+  document.querySelectorAll("#planSeg button").forEach(b=>b.classList.toggle("on",b.dataset.plan===p));
+  $("rentalSubWrap").classList.toggle("hidden",p!=="rental");
+  document.querySelectorAll("#rentalSub button").forEach(b=>b.classList.remove("on"));
+  if(p==="mochikomi"){
+    $("setFlow").classList.add("hidden");$("mochiFlow").classList.remove("hidden");calcMochi();
+  }else if(p==="purchase"){
+    activateSetPlan("purchase");
+  }else{ /* rental → 種別待ち */
+    $("setFlow").classList.add("hidden");$("mochiFlow").classList.add("hidden");
+    $("totalVal").textContent="0";
+  }
+}
+function setRentalSub(sub){
+  state.rentalSub=sub;
+  document.querySelectorAll("#rentalSub button").forEach(b=>b.classList.toggle("on",b.dataset.sub===sub));
+  activateSetPlan(sub);
+}
+function activePlanKey(){
+  if(state.plan==="purchase")return "purchase";
+  if(state.plan==="rental")return state.rentalSub;
+  return null;
+}
+function activateSetPlan(key){
+  $("mochiFlow").classList.add("hidden");$("setFlow").classList.remove("hidden");
+  const P=PLANS[key];
+  const sel=$("gradeSelect");sel.innerHTML='<option value="">-- 選択 --</option>';
+  P.grades.forEach((g,i)=>{
+    const o=document.createElement("option");o.value=i;o.textContent="¥"+yen(g.price);sel.appendChild(o);
+  });
+  $("basePrice").value="";
+  $("troubleRow").style.display=P.trouble?"flex":"none";
+  if(!P.trouble)state.tog.optTrouble=false;
+  $("planNote").textContent=P.label+"／基準額はグレードで自動設定（修正可）";
+  buildKomonoRows();
+  calcSet();
+}
+function onGradeSelect(){
+  const key=activePlanKey();if(!key)return;
+  const idx=$("gradeSelect").value;if(idx==="")return;
+  const g=PLANS[key].grades[Number(idx)];
+  $("basePrice").value=g.price;
+  const base=Object.assign({},PLANS[key].base);
+  if(g.obi!==undefined)base.obi=g.obi;
+  if(g.juban!==undefined)base.juban=g.juban;
+  KOMONO.forEach(k=>{const el=$("kb_"+k.key);if(el)el.value=base[k.key];});
+  calcSet();
+}
+
+/* ============================================================
+   小物差額テーブル
+============================================================ */
+function buildKomonoRows(){
+  const key=activePlanKey();
+  const base=key?PLANS[key].base:{};
+  const body=$("komonoBody");body.innerHTML="";
+  KOMONO.forEach(k=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td class="name">${k.label}</td>
+      <td><input type="number" inputmode="numeric" id="kc_${k.key}" placeholder="0" oninput="calcSet()"></td>
+      <td><input type="number" inputmode="numeric" id="kb_${k.key}" value="${base[k.key]!==undefined?base[k.key]:0}" oninput="calcSet()"></td>
+      <td class="diff zero" id="kd_${k.key}">¥0</td>`;
+    body.appendChild(tr);
+  });
+}
+
+/* ============================================================
+   トグル / 半衿
+============================================================ */
+function tog(field,val){
+  state.tog[field]=val;
+  const map={optHan:"tgHan",optTrouble:"tgTrouble"};
+  const t=$(map[field]);
+  t.children[0].classList.toggle("on",!val);t.children[0].classList.toggle("off",!val);
+  t.children[1].classList.toggle("on",val);
+  calcSet();
+}
+function setHan(h){
+  state.han=h;
+  document.querySelectorAll("#hanSeg button").forEach(b=>b.classList.toggle("on",b.dataset.h===h));
+  calcMochi();
+}
+
+/* ============================================================
+   購入・レンタル 計算
+============================================================ */
+function num(id){const el=$(id);return el?Number(el.value||0):0;}
+function calcSet(){
+  const key=activePlanKey();if(!key){return;}
+  const P=PLANS[key];
+  const basePrice=num("basePrice");
+  let diffSum=0;const diffs={};
+  KOMONO.forEach(k=>{
+    const coord=num("kc_"+k.key), b=num("kb_"+k.key);
+    const d=Math.max(0,coord-b);diffs[k.key]=d;diffSum+=d;
+    const el=$("kd_"+k.key);if(el){el.textContent="¥"+yen(d);el.classList.toggle("zero",d===0);}
+  });
+  const shishu=num("optShishu");
+  const han=state.tog.optHan?3300:0;
+  const trouble=(P.trouble&&state.tog.optTrouble)?5500:0;
+  const disc=num("discAmt");
+  const total=basePrice+diffSum+shishu+han+trouble-disc;
+  $("totalVal").textContent=yen(total);
+  let h=`<div class="summary-line"><span>基本セット（${P.label}）</span><span>¥${yen(basePrice)}</span></div>`;
+  KOMONO.forEach(k=>{if(diffs[k.key]>0)h+=`<div class="summary-line"><span>${k.label} 差額</span><span>¥${yen(diffs[k.key])}</span></div>`;});
+  if(shishu>0)h+=`<div class="summary-line"><span>刺繍半衿</span><span>¥${yen(shishu)}</span></div>`;
+  if(han>0)h+=`<div class="summary-line"><span>半衿付け代</span><span>¥${yen(han)}</span></div>`;
+  if(trouble>0)h+=`<div class="summary-line"><span>トラブルサポート</span><span>¥${yen(trouble)}</span></div>`;
+  if(disc>0)h+=`<div class="summary-line"><span class="minus">割引${$("discNote").value?"（"+$("discNote").value+"）":""}</span><span class="minus">-¥${yen(disc)}</span></div>`;
+  h+=`<div class="summary-line big"><span>合計（税込）</span><span>¥${yen(total)}</span></div>`;
+  $("setSummary").innerHTML=h;
+  return {basePrice,diffs,diffSum,shishu,han,trouble,disc,total};
+}
+
+/* ============================================================
+   持込み 計算
+============================================================ */
+/* --- 加工カテゴリUI --- */
+const KAKO_UI = {
+  furisode:{cat:"furisodeCat", list:"kakoFurisode", shimi:"shimiFurisode"},
+  obi:{cat:"obiCat", list:"kakoObi", shimi:"shimiObi"},
+  juban:{cat:"jubanCat", list:"kakoJuban", shimi:"shimiJuban"}
+};
+const FREE_UI={furisode:"freeFurisode",obi:"freeObi",juban:"freeJuban"};
+function buildKakoLists(){
+  ["furisode","obi","juban"].forEach(item=>{ renderKakoCats(item); renderKakoItems(item); renderFree(state.kako[item].free, FREE_UI[item]); });
+}
+/* 自由入力行（入力すると自動で次の空行を追加。複数可） */
+function makeFreeRow(container, arr, row){
+  const div=document.createElement("div");div.className="kako-item";
+  const nm=document.createElement("input");nm.type="text";nm.placeholder="内容（名称）";nm.value=row.name||"";
+  nm.style.cssText="flex:1;min-width:120px;border:1px solid var(--line);border-radius:7px;padding:7px 8px";
+  const am=document.createElement("input");am.type="number";am.inputMode="numeric";am.placeholder="金額";am.value=row.amt?row.amt:"";
+  am.style.cssText="width:96px;text-align:right;border:1px solid var(--line);border-radius:7px;padding:7px 6px";
+  let spawned=(row.name||row.amt)?true:false;
+  function maybeSpawn(){ if(!spawned && (nm.value||am.value)){ spawned=true; const nr={name:"",amt:0}; arr.push(nr); makeFreeRow(container,arr,nr); } }
+  nm.oninput=()=>{ row.name=nm.value; maybeSpawn(); calcMochi(); };
+  am.oninput=()=>{ row.amt=Number(am.value||0); maybeSpawn(); calcMochi(); };
+  div.appendChild(nm);div.appendChild(am);
+  container.appendChild(div);
+}
+function renderFree(arr, containerId){
+  const c=$(containerId); if(!c)return; c.innerHTML="";
+  const filled=(arr||[]).filter(r=>r.name||r.amt);
+  arr.length=0; filled.forEach(r=>arr.push(r)); arr.push({name:"",amt:0});
+  arr.forEach(r=>makeFreeRow(c,arr,r));
+}
+function sumFree(arr){
+  let s=0; const names=[];
+  (arr||[]).forEach(r=>{ if(r.amt>0){ s+=r.amt; names.push([r.name||"追加加工",r.amt]); } });
+  return {sum:s,names};
+}
+/* 和装小物（小物セット＋自由入力） */
+function buildWasou(){
+  const sc=$("wasouSetWrap");
+  if(sc){ sc.innerHTML="";
+    const st=state.wasou.setSel;
+    const div=document.createElement("div");div.className="kako-item"+(st.checked?" on":"");
+    const cb=document.createElement("input");cb.type="checkbox";cb.checked=!!st.checked;
+    const nm=document.createElement("span");nm.className="kn";nm.textContent="小物セット";
+    const am=document.createElement("input");am.type="number";am.inputMode="numeric";am.value=st.amt;
+    cb.onchange=()=>{ st.checked=cb.checked; div.classList.toggle("on",cb.checked); calcMochi(); };
+    am.oninput=()=>{ st.amt=Number(am.value||0); calcMochi(); };
+    div.appendChild(cb);div.appendChild(nm);div.appendChild(am);sc.appendChild(div);
+  }
+  renderFree(state.wasou.free, "wasouFree");
+}
+function renderKakoCats(item){
+  const cats=Object.keys(KAKO[item]);
+  const st=state.kako[item]; if(!st.cat) st.cat=cats[0];
+  const c=$(KAKO_UI[item].cat); if(!c)return; c.innerHTML="";
+  cats.forEach(cat=>{
+    const b=document.createElement("button");
+    b.type="button"; b.textContent=cat; if(cat===st.cat)b.classList.add("on");
+    b.onclick=()=>{ st.cat=cat; renderKakoCats(item); renderKakoItems(item); calcMochi(); };
+    c.appendChild(b);
+  });
+}
+function kakoRow(item,key,label,amt,checked,placeholder){
+  const st=state.kako[item];
+  const div=document.createElement("div");div.className="kako-item"+(checked?" on":"");
+  const cb=document.createElement("input");cb.type="checkbox";cb.checked=!!checked;
+  const nm=document.createElement("span");nm.className="kn";nm.textContent=label;
+  const am=document.createElement("input");am.type="number";am.inputMode="numeric";am.value=amt;
+  if(placeholder)am.placeholder=placeholder;
+  cb.onchange=()=>{ st.sel[key].checked=cb.checked; div.classList.toggle("on",cb.checked); calcMochi(); };
+  am.oninput=()=>{ st.sel[key].amt=Number(am.value||0); calcMochi(); };
+  div.appendChild(cb);div.appendChild(nm);div.appendChild(am);
+  return div;
+}
+function renderKakoItems(item){
+  const st=state.kako[item];
+  const list=KAKO[item][st.cat]||[];
+  const c=$(KAKO_UI[item].list); if(!c)return; c.innerHTML="";
+  list.forEach((it,idx)=>{
+    const key=st.cat+"||"+idx;
+    if(!st.sel[key]) st.sel[key]={checked:false,amt:it[1]};
+    c.appendChild(kakoRow(item,key,it[0],st.sel[key].amt,st.sel[key].checked));
+  });
+  const sc=$(KAKO_UI[item].shimi);
+  if(sc){ sc.innerHTML="";
+    if(!st.sel.shimi) st.sel.shimi={checked:false,amt:0};
+    sc.appendChild(kakoRow(item,"shimi",SHIMI_LABEL,st.sel.shimi.amt,st.sel.shimi.checked,"見積り金額"));
+  }
+}
+function sumKakoItem(item){
+  const st=state.kako[item]; let s=0; const names=[];
+  Object.keys(st.sel).forEach(key=>{
+    const sel=st.sel[key];
+    if(sel.checked && sel.amt>0){
+      s+=sel.amt;
+      let nm; if(key==="shimi")nm="しみ抜き・工芸修正"; else{ const p=key.split("||"); nm=KAKO[item][p[0]][Number(p[1])][0]; }
+      names.push([nm,sel.amt]);
+    }
+  });
+  const fr=sumFree(st.free); s+=fr.sum; fr.names.forEach(n=>names.push(n));
+  return {sum:s,names};
+}
+function buildMochiKomono(){
+  const c=$("mochiKomonoBody");if(!c)return;c.innerHTML="";
+  MOCHI_KOMONO.forEach(k=>{
+    const div=document.createElement("div");div.className="opt-row";div.style.flexWrap="wrap";
+    const kbn=state.kako.mk[k.key]||"mochi";
+    div.innerHTML=`<div style="width:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="lbl" style="min-width:84px">${k.label}</span>
+        <div class="toggle mk3" style="gap:4px">
+          <button type="button" data-v="purchase">購入</button>
+          <button type="button" data-v="rental">レンタル</button>
+          <button type="button" data-v="mochi">持ち込み</button>
+        </div>
+        <input type="number" inputmode="numeric" id="mk_amt_${k.key}" placeholder="金額" oninput="calcMochi()"
+          style="flex:1;min-width:90px;padding:8px;border:1px solid var(--line);border-radius:8px;text-align:right">
+        <input type="text" id="mk_memo_${k.key}" placeholder="メモ（加工内容等）"
+          style="width:100%;padding:8px;border:1px solid var(--line);border-radius:8px">
+      </div>`;
+    c.appendChild(div);
+    const tg=div.querySelector(".mk3");
+    tg.querySelectorAll("button").forEach(b=>{
+      if(b.dataset.v===kbn)b.classList.add("on");
+      b.onclick=()=>{ state.kako.mk[k.key]=b.dataset.v;
+        tg.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.v===b.dataset.v)); calcMochi(); };
+    });
+  });
+}
+function setObi(v){
+  state.obi=v;
+  document.querySelectorAll("#obiSeg button").forEach(b=>b.classList.toggle("on",b.dataset.obi===v));
+  $("obiAmtWrap").classList.toggle("hidden",!(v==="purchase"||v==="rental"));
+  $("obiKakoWrap").classList.toggle("hidden",v!=="mochi");
+  calcMochi();
+}
+function setJuban(v){
+  state.juban=v;
+  document.querySelectorAll("#jubanSeg button").forEach(b=>b.classList.toggle("on",b.dataset.j===v));
+  $("jubanAmtWrap").classList.toggle("hidden",!(v==="purchase"||v==="rental"));
+  $("jubanKakoWrap").classList.toggle("hidden",v!=="mochi");
+  calcMochi();
+}
+function calcMochi(){
+  const parts=[];let total=0;
+  const f=sumKakoItem("furisode");
+  if(f.sum>0){parts.push(["振袖 加工",f.sum]);total+=f.sum;}
+  if(state.obi==="purchase"||state.obi==="rental"){
+    const a=num("obiAmt");if(a>0){parts.push(["帯（"+(state.obi==="purchase"?"購入":"レンタル")+"）",a]);total+=a;}
+  }else if(state.obi==="mochi"){
+    const o=sumKakoItem("obi");if(o.sum>0){parts.push(["帯 加工（持ち込み）",o.sum]);total+=o.sum;}
+  }
+  if(state.juban==="purchase"||state.juban==="rental"){
+    const a=num("jubanAmt");if(a>0){parts.push(["長襦袢（"+(state.juban==="purchase"?"購入":"レンタル")+"）",a]);total+=a;}
+  }else if(state.juban==="mochi"){
+    const j=sumKakoItem("juban");if(j.sum>0){parts.push(["長襦袢 加工（持ち込み）",j.sum]);total+=j.sum;}
+  }
+  const hp=HAN_PRICE[state.han]||0;
+  if(hp>0){parts.push(["半衿（"+HAN_LABEL[state.han]+"）",hp]);total+=hp;}
+  const mShishu=num("mShishu");
+  if(mShishu>0){parts.push(["刺繍衿（本体）",mShishu]);total+=mShishu;}
+  MOCHI_KOMONO.forEach(k=>{
+    const kbn=state.kako.mk[k.key]||"mochi";
+    const a=num("mk_amt_"+k.key);
+    if(a>0){ const lab={mochi:"持ち込み",purchase:"購入",rental:"レンタル"}[kbn];
+      parts.push([k.label+"（"+lab+"）",a]);total+=a; }
+  });
+  if(state.wasou.setSel.checked && state.wasou.setSel.amt>0){
+    parts.push(["小物セット",state.wasou.setSel.amt]); total+=state.wasou.setSel.amt;
+  }
+  const wf=sumFree(state.wasou.free);
+  wf.names.forEach(n=>parts.push(["和装小物："+n[0],n[1]]));
+  total+=wf.sum;
+  const disc=num("mDiscAmt");
+  total-=disc;
+  $("totalVal").textContent=yen(total);
+  let h="";
+  if(parts.length===0)h=`<p class="hint">加工・商品を選択すると内訳が表示されます</p>`;
+  parts.forEach(p=>h+=`<div class="summary-line"><span>${p[0]}</span><span>¥${yen(p[1])}</span></div>`);
+  if(disc>0)h+=`<div class="summary-line"><span class="minus">割引${$("mDiscNote").value?"（"+$("mDiscNote").value+"）":""}</span><span class="minus">-¥${yen(disc)}</span></div>`;
+  h+=`<div class="summary-line big"><span>合計（税込）</span><span>¥${yen(total)}</span></div>`;
+  $("mochiSummary").innerHTML=h;
+  return {parts,disc,total};
+}
+
+/* ============================================================
+   保存 / 通し番号
+============================================================ */
+const LS_KEY="furisode_estimates_"+STORE.code;
+const LS_CNT="furisode_counter_"+STORE.code;
+let useFB=false, db=null, records=[];
+
+function fbConfigured(){ return !!(FIREBASE_CONFIG && FIREBASE_CONFIG.projectId && window.firebase); }
+function initStorage(){
+  if(fbConfigured()){
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      db=firebase.firestore();
+      db.enablePersistence({synchronizeTabs:true}).catch(function(){});
+      useFB=true;
+      db.collection("furisode_estimates").where("storeCode","==",STORE.code)
+        .onSnapshot(function(snap){
+          records=snap.docs.map(function(d){return d.data();});
+          records.sort(function(a,b){return b.createdAt-a.createdAt;});
+          if($("viewReg")&&!$("viewReg").classList.contains("hidden")) renderRegList();
+          if($("salesReview")&&!$("salesReview").classList.contains("hidden")) renderReviewList();
+        }, function(err){ console.warn("Firestore:",err); });
+    }catch(e){ useFB=false; console.warn(e); }
+  }
+  if(!useFB){ records=loadAllLocal(); }
+  updateSerialField();
+}
+function loadAllLocal(){try{return JSON.parse(localStorage.getItem(LS_KEY))||[];}catch(e){return [];}}
+function saveAllLocal(a){localStorage.setItem(LS_KEY,JSON.stringify(a));}
+function localCounter(){return Number(localStorage.getItem(LS_CNT)||0);}
+function fmtSerial(n){return STORE.code+"-"+String(n).padStart(4,"0");}
+function updateSerialField(){
+  if(state.editId){ $("fSerial").value=state.editId; return; }
+  $("fSerial").value = useFB ? "保存時に自動採番" : fmtSerial(localCounter()+1);
+}
+async function nextSerialFB(){
+  const ref=db.collection("counters").doc(STORE.code);
+  return fmtSerial(await db.runTransaction(async function(t){
+    const s=await t.get(ref);
+    const c=(s.exists?(s.data().n||0):0)+1;
+    t.set(ref,{n:c});
+    return c;
+  }));
+}
+async function saveEstimate(status){
+  const isDraft = status==="draft";
+  const customer=$("fCustomer").value.trim();
+  if(!customer){toast("お客様名を入力してください");return;}
+  if(!isDraft){
+    if(!state.plan){toast("プラン区分を選択してください");return;}
+    if(state.plan==="rental"&&!state.rentalSub){toast("レンタル種別を選択してください");return;}
+  }
+  const staff=$("fStaff").value.trim();
+  const date=$("fDate").value;
+  let rec={ storeCode:STORE.code, store:STORE.name, date, staff, customer,
+            expiry:$("fExpiry").value.trim(),
+            status:(isDraft?"draft":"registered"), createdAt:Date.now() };
+  if(state.plan==="mochikomi"){
+    const c=calcMochi();
+    rec.type="持込み（ママ振）";rec.total=c.total;
+    rec.detail={ parts:c.parts, discNote:$("mDiscNote").value, disc:c.disc };
+  }else if(state.plan==="purchase" || (state.plan==="rental" && state.rentalSub)){
+    const key=activePlanKey();const c=calcSet();
+    rec.type=PLANS[key].label;rec.total=c.total;
+    rec.detail={
+      basePrice:c.basePrice,
+      komono:KOMONO.map(k=>({label:k.label,coord:num("kc_"+k.key),base:num("kb_"+k.key),diff:c.diffs[k.key]})),
+      shishu:c.shishu, han:c.han, trouble:c.trouble,
+      discNote:$("discNote").value, disc:c.disc
+    };
+  }else{
+    rec.type="下書き（未確定）"; rec.total=0; rec.detail={};
+  }
+  try{
+    if(useFB){
+      const serial = state.editId || await nextSerialFB();
+      rec.serial=serial;
+      await db.collection("furisode_estimates").doc(serial).set(rec);
+      toast((state.editId?"更新しました（":(isDraft?"下書き保存しました（":"登録しました（"))+serial+"）");
+    }else{
+      const all=loadAllLocal();
+      if(state.editId){
+        const i=all.findIndex(r=>r.serial===state.editId);
+        rec.serial=state.editId;
+        if(i>=0)all[i]=rec; else all.push(rec);
+        toast("更新しました（"+rec.serial+"）");
+      }else{
+        const n=localCounter()+1; localStorage.setItem(LS_CNT,String(n));
+        rec.serial=fmtSerial(n); all.push(rec);
+        toast((isDraft?"下書き保存しました（":"登録しました（")+rec.serial+"）");
+      }
+      saveAllLocal(all); records=loadAllLocal();
+    }
+  }catch(e){ console.warn(e); toast("保存に失敗しました。通信状況をご確認ください"); return; }
+  state.editId=null;
+  resetAfterSave();
+}
+function resetAfterSave(){
+  ["fStaff","fCustomer","fExpiry","basePrice","optShishu","discNote","discAmt",
+   "obiAmt","jubanAmt","mDiscNote","mDiscAmt","mShishu"].forEach(id=>{if($(id))$(id).value="";});
+  freshState();
+  document.querySelectorAll("#planSeg button,#rentalSub button,#obiSeg button,#jubanSeg button,#hanSeg button")
+    .forEach(b=>b.classList.remove("on"));
+  $("rentalSubWrap").classList.add("hidden");
+  $("setFlow").classList.add("hidden");$("mochiFlow").classList.add("hidden");
+  resetTogUI();updateSerialField();
+  buildKomonoRows();buildKakoLists();buildMochiKomono();buildWasou();
+  $("totalVal").textContent="0";
+}
+
+/* ============================================================
+   レジ画面
+============================================================ */
+function renderRegList(){
+  if(!useFB) records=loadAllLocal().sort((a,b)=>b.createdAt-a.createdAt);
+  const q=($("regSearch").value||"").trim().toLowerCase();
+  let all=records.filter(r=>recStatus(r)!=="draft");
+  if(q)all=all.filter(r=>
+    (r.customer||"").toLowerCase().includes(q)||
+    (r.serial||"").toLowerCase().includes(q)||
+    (r.date||"").includes(q));
+  const c=$("regList");
+  if(all.length===0){c.innerHTML=`<div class="empty">該当する見積りがありません</div>`;return;}
+  c.innerHTML="";
+  all.forEach(r=>{
+    const d=document.createElement("div");d.className="rec";
+    d.innerHTML=`<div class="rc-l">
+        <div class="no">${r.serial}</div>
+        <div class="nm">${escapeHtml(r.customer)} 様</div>
+        <div class="meta">${r.date}${r.staff?"｜担当 "+escapeHtml(r.staff):""}</div>
+      </div>
+      <div class="rc-r"><div class="tag">${r.type}</div><div class="amt">¥${yen(r.total)}</div></div>`;
+    d.onclick=()=>showDetail(r.serial);
+    c.appendChild(d);
+  });
+}
+function showDetail(serial){
+  const r=records.find(x=>x.serial===serial);if(!r)return;
+  let body="";
+  if(r.type.indexOf("持込み")>=0){
+    (r.detail.parts||[]).forEach(p=>body+=line(p[0],p[1]));
+    if(r.detail.disc>0)body+=line("割引"+(r.detail.discNote?"（"+escapeHtml(r.detail.discNote)+"）":""),-r.detail.disc,true);
+  }else{
+    body+=line("基本セット",r.detail.basePrice);
+    (r.detail.komono||[]).forEach(k=>{if(k.diff>0)body+=line(k.label+" 差額",k.diff);});
+    if(r.detail.shishu>0)body+=line("刺繍半衿",r.detail.shishu);
+    if(r.detail.han>0)body+=line("半衿付け代",r.detail.han);
+    if(r.detail.trouble>0)body+=line("トラブルサポート",r.detail.trouble);
+    if(r.detail.disc>0)body+=line("割引"+(r.detail.discNote?"（"+escapeHtml(r.detail.discNote)+"）":""),-r.detail.disc,true);
+  }
+  body+=`<div class="summary-line big"><span>合計（税込）</span><span>¥${yen(r.total)}</span></div>`;
+  const m=document.createElement("div");m.className="modal";
+  const draftBadge = recStatus(r)==="draft"
+    ? ' <span style="font-size:12px;background:#efe6e0;color:var(--gold);padding:2px 10px;border-radius:20px;vertical-align:middle">下書き</span>' : '';
+  m.innerHTML=`<div class="modal-card">
+    <h2>${r.serial}${draftBadge}</h2>
+    <div class="detail-head">
+      <div><b>${escapeHtml(r.customer)}</b> 様</div>
+      <div>日付：${r.date}｜担当：${escapeHtml(r.staff||"—")}</div>
+      <div>プラン：<b>${r.type}</b>｜${r.store}</div>
+    </div>
+    ${body}
+    <div class="modal-actions no-print">
+      <button class="btn-ghost" onclick="showEstimateSheet('${r.serial}')">🧾 見積書</button>
+      <button class="btn-ghost" onclick="editEstimate('${r.serial}')">✏️ 編集</button>
+      <button class="btn-primary" onclick="closeModal()">閉じる</button>
+    </div>
+    <div class="modal-actions no-print" style="margin-top:8px">
+      <button class="btn-ghost" style="color:var(--red)" onclick="delEstimate('${r.serial}')">🗑 削除</button>
+    </div>
+  </div>`;
+  m.onclick=function(e){if(e.target===m)closeModal();};
+  $("modalRoot").appendChild(m);
+}
+function line(label,amt,minus){
+  return `<div class="summary-line"><span class="${minus?'minus':''}">${label}</span><span class="${minus?'minus':''}">${minus?'-':''}¥${yen(Math.abs(amt))}</span></div>`;
+}
+function closeModal(){$("modalRoot").innerHTML="";}
+
+/* ============================================================
+   見積書（お客様向け・画像保存 / A4印刷）
+============================================================ */
+function esRow(label,amt,minus){
+  return `<tr><td>${escapeHtml(label)}</td><td class="es-amt${minus?' minus':''}">${minus?'-':''}¥${yen(amt)}</td></tr>`;
+}
+function showEstimateSheet(serial){
+  const r=records.find(x=>x.serial===serial); if(!r)return;
+  const d=r.detail||{};
+  closeModal();
+  let rows="", totalLabel="合計（税込）";
+  if(r.type.indexOf("持込み")>=0){
+    (d.parts||[]).forEach(p=>{ rows+=esRow(p[0],p[1]); });
+    if(d.disc>0)rows+=esRow("割引"+(d.discNote?"（"+d.discNote+"）":""),d.disc,true);
+  }else{
+    rows+=`<tr class="es-sub"><td colspan="2">① 基本セット</td></tr>`;
+    rows+=esRow("基本セット（"+r.type+"）",d.basePrice||0);
+    const diffs=(d.komono||[]).filter(k=>k.diff>0);
+    const opts=[];
+    if(d.shishu>0)opts.push(["刺繍半衿",d.shishu]);
+    if(d.han>0)opts.push(["半衿付け代",d.han]);
+    if(d.trouble>0)opts.push(["トラブルサポート",d.trouble]);
+    if(diffs.length||opts.length)rows+=`<tr class="es-sub"><td colspan="2">② 小物差額・オプション</td></tr>`;
+    diffs.forEach(k=>rows+=esRow(k.label+" 差額",k.diff));
+    opts.forEach(o=>rows+=esRow(o[0],o[1]));
+    if(d.disc>0)rows+=esRow("割引"+(d.discNote?"（"+d.discNote+"）":""),d.disc,true);
+    totalLabel="③ 合計（税込）";
+  }
+  const sheet=`<div id="estimateSheet" class="es-wrap">
+    <div class="es-head">
+      <div class="es-brand">MK STYLE</div>
+      <div class="es-title">お 見 積 書</div>
+      <div class="es-store">${escapeHtml(r.store)}</div>
+    </div>
+    <table class="es-meta">
+      <tr><th>お客様名</th><td>${escapeHtml(r.customer)} 様</td></tr>
+      <tr><th>見積番号</th><td>${r.serial}</td></tr>
+      <tr><th>発行日</th><td>${r.date}</td></tr>
+      <tr><th>有効期限</th><td>${escapeHtml(r.expiry||"—")}</td></tr>
+      <tr><th>プラン</th><td>${escapeHtml(r.type)}</td></tr>
+    </table>
+    <table class="es-items">
+      <thead><tr><th>項目</th><th>金額（税込）</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td>${totalLabel}</td><td>¥${yen(r.total)}</td></tr></tfoot>
+    </table>
+    <div class="es-note">※本お見積りは概算です。お選びいただく商品により金額が変わる場合がございます。${r.expiry?"<br>有効期限："+escapeHtml(r.expiry):""}</div>
+  </div>`;
+  const m=document.createElement("div"); m.className="modal"; m.id="sheetModal";
+  m.innerHTML=`<div class="modal-card" style="max-width:640px">
+    ${sheet}
+    <div class="modal-actions no-print">
+      <button class="btn-ghost" onclick="saveSheetImage('${r.serial}')">🖼 画像で保存</button>
+      <button class="btn-ghost" onclick="window.print()">🖨 印刷（A4）</button>
+      <button class="btn-primary" onclick="closeSheet()">閉じる</button>
+    </div>
+    <p class="hint no-print" style="margin-top:8px">iPadは「画像で保存」→表示された画像を長押しして「”写真”に保存」できます。LINE送付・A4印刷どちらも1枚に収まります。</p>
+  </div>`;
+  m.onclick=function(e){ if(e.target===m)closeSheet(); };
+  $("modalRoot").appendChild(m);
+}
+function closeSheet(){ $("modalRoot").innerHTML=""; }
+function saveSheetImage(serial){
+  const el=$("estimateSheet");
+  if(!el || typeof html2canvas==="undefined"){ toast("画像化ライブラリを読み込めませんでした（通信をご確認ください）"); return; }
+  toast("画像を作成中…");
+  html2canvas(el,{scale:2,backgroundColor:"#ffffff",useCORS:true}).then(function(canvas){
+    const url=canvas.toDataURL("image/png");
+    const ov=document.createElement("div"); ov.className="modal"; ov.id="imgOverlay";
+    ov.innerHTML=`<div class="modal-card" style="max-width:640px;text-align:center">
+      <p class="hint">画像を長押しして「”写真”に保存」、またはダウンロードしてください。</p>
+      <img src="${url}" alt="見積書" style="width:100%;border:1px solid var(--line);border-radius:8px">
+      <div class="modal-actions">
+        <a class="btn-ghost" style="text-decoration:none;display:flex;align-items:center;justify-content:center" href="${url}" download="見積書_${serial}.png">⬇ ダウンロード</a>
+        <button class="btn-primary" onclick="document.getElementById('imgOverlay').remove()">閉じる</button>
+      </div>
+    </div>`;
+    ov.onclick=function(e){ if(e.target===ov)ov.remove(); };
+    $("modalRoot").appendChild(ov);
+  }).catch(function(err){ console.warn(err); toast("画像の作成に失敗しました"); });
+}
+async function delEstimate(serial){
+  if(!confirm("この見積りを削除しますか？"))return;
+  try{
+    if(useFB){ await db.collection("furisode_estimates").doc(serial).delete(); }
+    else{ saveAllLocal(loadAllLocal().filter(r=>r.serial!==serial)); records=loadAllLocal(); }
+  }catch(e){ toast("削除に失敗しました"); return; }
+  closeModal();renderRegList();toast("削除しました");
+}
+function editEstimate(serial){
+  const r=records.find(x=>x.serial===serial);if(!r)return;
+  closeModal();switchTab("sales");salesMode("new");
+  state.editId=serial;
+  $("fDate").value=r.date;$("fStaff").value=r.staff||"";$("fCustomer").value=r.customer;$("fSerial").value=r.serial;
+  $("fExpiry").value=r.expiry||"";
+  const d=r.detail||{};
+  if(r.type.indexOf("持込み")>=0){
+    setPlan("mochikomi");
+    toast("持込みは金額を再入力してください（編集モード）");
+  }else if(d.basePrice!==undefined){
+    if(r.type.indexOf("プレタ")>=0){setPlan("rental");setRentalSub("rental_preta");}
+    else if(r.type.indexOf("セミオーダー")>=0){setPlan("rental");setRentalSub("rental_order");}
+    else{setPlan("purchase");}
+    $("basePrice").value=d.basePrice;
+    (d.komono||[]).forEach((k,i)=>{
+      const key=KOMONO[i]&&KOMONO[i].key;
+      if(key&&$("kc_"+key)){$("kc_"+key).value=k.coord||"";$("kb_"+key).value=k.base||0;}
+    });
+    $("optShishu").value=d.shishu||"";
+    if(d.han>0)tog("optHan",true);
+    if(d.trouble>0)tog("optTrouble",true);
+    $("discNote").value=d.discNote||"";$("discAmt").value=d.disc||"";
+    calcSet();
+  }else{
+    toast("下書き（未確定）を編集モードで開きました");
+  }
+  if(recStatus(r)!=="draft") toast("編集モード："+serial);
+}
+
+/* ============================================================
+   ユーティリティ
+============================================================ */
+function escapeHtml(s){return (s||"").replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+let toastT;
+function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove("show");},2200);}
+
+/* start */
+buildKeypad();
+initStorage();
+</script>
+</body>
+</html>
