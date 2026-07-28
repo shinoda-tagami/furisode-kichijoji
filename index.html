@@ -432,6 +432,8 @@ input,select{font-family:inherit;font-size:16px;color:var(--ink)}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <!-- 見積書の画像化 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- レジ用バーコード表示 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 
 <script>
 "use strict";
@@ -499,23 +501,30 @@ const PLANS = {
 
 /* 持込み加工（2026.1改定） */
 /* 持込み加工（きものブレイン 2025.10改定・税込） カテゴリ別 */
+/* 各項目 = [名称, 金額, バーコード]（きものブレイン 2025.10改定・税込） */
 const KAKO = {
   furisode:{
-    "仕立て直し":[["解き",3960],["洗い張り",8360],["胴裏",22000],["八掛",18700],["国内仕立て",104500],["海外仕立て",44000],["ガード加工",17600]],
-    "部分直し":[["身丈直し（内揚）",50600],["身丈直し（裾）",25300],["袖丈直し",17600],["袖作り直し",27500],["裄直し（肩巾・袖巾）",19800],["裄直し（肩巾）",14300],["裄直し（袖巾）",14300],["胴裏取り換え",49500],["胴裏",22000],["八掛取り換え",46200],["八掛",18700],["スジけし",0]],
-    "洗い":[["丸洗い",9900],["汗抜き",7700]]
+    "仕立て直し":[["解き",3960,"0000173032198"],["洗い張り",8360,"0000173032181"],["胴裏",22000,"0000182519277"],["八掛",18700,""],["国内仕立て",104500,"0000181097714"],["海外仕立て",44000,"0000181097691"],["ガード加工",17600,"0000181704353"]],
+    "部分直し":[["身丈直し（内揚）",50600,"0000181187705"],["身丈直し（裾）",25300,"0000181624385"],["袖丈直し",17600,"0000181116170"],["袖作り直し",27500,"0000181116729"],["裄直し（肩巾・袖巾）",19800,"0000181116644"],["裄直し（肩巾）",14300,"0000181116569"],["裄直し（袖巾）",14300,"0000181116262"],["胴裏取り換え",49500,"0000181119072"],["胴裏",22000,"0000182519277"],["八掛取り換え",46200,"0000181119133"],["八掛",18700,""],["スジけし",0,""]],
+    "洗い":[["丸洗い",9900,"0000181119836"],["汗抜き",7700,"0000181302238"]]
   },
   obi:{
-    "仕立て直し":[["解き",1100],["洗い張り",5500],["帯芯",3300],["丸巻きから仕立て",13750],["ガード加工",13200],["スジけし",0]],
-    "洗い":[["丸洗い",6600],["汗抜き",3300]]
+    "仕立て直し":[["解き",1100,"0000173032358"],["洗い張り",5500,"0000173032341"],["帯芯",3300,"0000181115784"],["丸巻きから仕立て",13750,"0000167334949"],["ガード加工",13200,"0000181707330"],["スジけし",0,""]],
+    "洗い":[["丸洗い",6600,"0000181120047"],["汗抜き",3300,"0000181233556"]]
   },
   juban:{
-    "仕立て直し":[["解き",3300],["洗い張り",4400],["衿芯",880],["居敷当",6600],["国内仕立て",50600],["海外仕立て",25300],["ガード加工",14300]],
-    "部分直し":[["身丈直し（内揚）",41800],["身丈直し（裾）",20900],["袖丈直し",14300],["袖作り直し",22000],["裄直し（肩巾・袖巾）",16500],["裄直し（肩巾）",13200],["裄直し（袖巾）",13200],["地衿交換",14300],["スジけし",0]],
-    "洗い":[["丸洗い",5500],["汗抜き",7700]]
+    "仕立て直し":[["解き",3300,"0000173032334"],["洗い張り",4400,"0000173032303"],["衿芯",880,"0000167332242"],["居敷当",6600,"0000182550683"],["国内仕立て",50600,"0000181114688"],["海外仕立て",25300,"0000181114664"],["ガード加工",14300,"0000181707279"]],
+    "部分直し":[["身丈直し（内揚）",41800,"0000181187750"],["身丈直し（裾）",20900,"0000181624422"],["袖丈直し",14300,"0000181116224"],["袖作り直し",22000,"0000181118709"],["裄直し（肩巾・袖巾）",16500,"0000181116699"],["裄直し（肩巾）",13200,"0000181116613"],["裄直し（袖巾）",13200,"0000181116316"],["地衿交換",14300,"0000181119416"],["スジけし",0,""]],
+    "洗い":[["丸洗い",5500,"0000181119942"],["汗抜き",7700,"0000181302238"]]
   }
 };
 const SHIMI_LABEL="しみ抜き・工芸修正（見積り）";  /* どの加工でも共通で選べる */
+/* お預かりコード（加工発生時に必須）*/
+const OAZUKARI = {
+  furisode:{label:"お預かり（振袖）",code:"0000167458300"},
+  obi:{label:"お預かり（袋帯）",code:"0000167458546"},
+  juban:{label:"お預かり（振袖襦袢）",code:"0000167458492"}
+};
 const MOCHI_KOMONO=[
   {key:"obijime",label:"帯締め"},{key:"obiage",label:"帯揚げ"},{key:"kasane",label:"重ね衿"},
   {key:"zori",label:"草履バッグ"},{key:"shawl",label:"ショール"}
@@ -859,17 +868,20 @@ function renderKakoItems(item){
   }
 }
 function sumKakoItem(item){
-  const st=state.kako[item]; let s=0; const names=[];
+  const st=state.kako[item]; let s=0; const names=[]; const codes=[];
   Object.keys(st.sel).forEach(key=>{
     const sel=st.sel[key];
     if(sel.checked && sel.amt>0){
       s+=sel.amt;
-      let nm; if(key==="shimi")nm="しみ抜き・工芸修正"; else{ const p=key.split("||"); nm=KAKO[item][p[0]][Number(p[1])][0]; }
+      let nm;
+      if(key==="shimi"){ nm="しみ抜き・工芸修正"; }
+      else{ const p=key.split("||"); const it=KAKO[item][p[0]][Number(p[1])]; nm=it[0];
+            if(it[2]) codes.push([nm,it[2]]); }
       names.push([nm,sel.amt]);
     }
   });
   const fr=sumFree(st.free); s+=fr.sum; fr.names.forEach(n=>names.push(n));
-  return {sum:s,names};
+  return {sum:s,names,codes};
 }
 function buildMochiKomono(){
   const c=$("mochiKomonoBody");if(!c)return;c.innerHTML="";
@@ -912,18 +924,32 @@ function setJuban(v){
   calcMochi();
 }
 function calcMochi(){
-  const parts=[];let total=0;
+  const parts=[];let total=0;const barcodes=[];
   const f=sumKakoItem("furisode");
-  if(f.sum>0){parts.push(["振袖 加工",f.sum]);total+=f.sum;}
+  if(f.sum>0){
+    parts.push(["振袖 加工",f.sum]);total+=f.sum;
+    barcodes.push(["振袖／"+OAZUKARI.furisode.label,OAZUKARI.furisode.code,true]);
+    f.codes.forEach(c=>barcodes.push(["振袖／"+c[0],c[1]]));
+  }
   if(state.obi==="purchase"||state.obi==="rental"){
     const a=num("obiAmt");if(a>0){parts.push(["帯（"+(state.obi==="purchase"?"購入":"レンタル")+"）",a]);total+=a;}
   }else if(state.obi==="mochi"){
-    const o=sumKakoItem("obi");if(o.sum>0){parts.push(["帯 加工（持ち込み）",o.sum]);total+=o.sum;}
+    const o=sumKakoItem("obi");
+    if(o.sum>0){
+      parts.push(["帯 加工（持ち込み）",o.sum]);total+=o.sum;
+      barcodes.push(["帯／"+OAZUKARI.obi.label,OAZUKARI.obi.code,true]);
+      o.codes.forEach(c=>barcodes.push(["帯／"+c[0],c[1]]));
+    }
   }
   if(state.juban==="purchase"||state.juban==="rental"){
     const a=num("jubanAmt");if(a>0){parts.push(["長襦袢（"+(state.juban==="purchase"?"購入":"レンタル")+"）",a]);total+=a;}
   }else if(state.juban==="mochi"){
-    const j=sumKakoItem("juban");if(j.sum>0){parts.push(["長襦袢 加工（持ち込み）",j.sum]);total+=j.sum;}
+    const j=sumKakoItem("juban");
+    if(j.sum>0){
+      parts.push(["長襦袢 加工（持ち込み）",j.sum]);total+=j.sum;
+      barcodes.push(["長襦袢／"+OAZUKARI.juban.label,OAZUKARI.juban.code,true]);
+      j.codes.forEach(c=>barcodes.push(["長襦袢／"+c[0],c[1]]));
+    }
   }
   const hp=HAN_PRICE[state.han]||0;
   if(hp>0){parts.push(["半衿（"+HAN_LABEL[state.han]+"）",hp]);total+=hp;}
@@ -950,7 +976,7 @@ function calcMochi(){
   if(disc>0)h+=`<div class="summary-line"><span class="minus">割引${$("mDiscNote").value?"（"+$("mDiscNote").value+"）":""}</span><span class="minus">-¥${yen(disc)}</span></div>`;
   h+=`<div class="summary-line big"><span>合計（税込）</span><span>¥${yen(total)}</span></div>`;
   $("mochiSummary").innerHTML=h;
-  return {parts,disc,total};
+  return {parts,disc,total,barcodes};
 }
 
 /* ============================================================
@@ -1013,7 +1039,7 @@ async function saveEstimate(status){
   if(state.plan==="mochikomi"){
     const c=calcMochi();
     rec.type="持込み（ママ振）";rec.total=c.total;
-    rec.detail={ parts:c.parts, discNote:$("mDiscNote").value, disc:c.disc };
+    rec.detail={ parts:c.parts, barcodes:c.barcodes, discNote:$("mDiscNote").value, disc:c.disc };
   }else if(state.plan==="purchase" || (state.plan==="rental" && state.rentalSub)){
     const key=activePlanKey();const c=calcSet();
     rec.type=PLANS[key].label;rec.total=c.total;
@@ -1104,6 +1130,18 @@ function showDetail(serial){
     if(r.detail.disc>0)body+=line("割引"+(r.detail.discNote?"（"+escapeHtml(r.detail.discNote)+"）":""),-r.detail.disc,true);
   }
   body+=`<div class="summary-line big"><span>合計（税込）</span><span>¥${yen(r.total)}</span></div>`;
+  if(r.type.indexOf("持込み")>=0 && r.detail && r.detail.barcodes && r.detail.barcodes.length){
+    body+=`<div style="margin-top:16px;font-weight:700;color:var(--pink-d);font-size:14px">🏷 レジ用バーコード（加工）</div>
+      <p class="hint" style="margin-top:2px">加工品は「お預かり（必須）」＋「加工内容」を続けてスキャン／入力してください。</p>`;
+    r.detail.barcodes.forEach(b=>{
+      const oaz=(b[2]===true)||(b[0].indexOf("お預かり")>=0);
+      body+=`<div style="text-align:center;margin:8px 0;padding:8px 6px;border:${oaz?'2px solid var(--gold)':'1px solid var(--line)'};border-radius:8px;background:${oaz?'var(--soft)':'#fff'}">
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">${oaz?'📌 ':''}${escapeHtml(b[0])}${oaz?' <span style="font-size:11px;color:var(--gold);font-weight:700">必須</span>':''}</div>
+        <svg class="bcimg" data-code="${escapeHtml(b[1])}"></svg>
+        <div style="font-size:14px;color:var(--ink);letter-spacing:2px;font-family:monospace">${escapeHtml(b[1])}</div>
+      </div>`;
+    });
+  }
   const m=document.createElement("div");m.className="modal";
   const draftBadge = recStatus(r)==="draft"
     ? ' <span style="font-size:12px;background:#efe6e0;color:var(--gold);padding:2px 10px;border-radius:20px;vertical-align:middle">下書き</span>' : '';
@@ -1126,6 +1164,14 @@ function showDetail(serial){
   </div>`;
   m.onclick=function(e){if(e.target===m)closeModal();};
   $("modalRoot").appendChild(m);
+  renderBarcodes(m);
+}
+function renderBarcodes(root){
+  if(typeof JsBarcode==="undefined")return;
+  root.querySelectorAll("svg.bcimg").forEach(function(el){
+    try{ JsBarcode(el, el.getAttribute("data-code"), {format:"CODE39",displayValue:false,height:46,width:1.5,margin:4}); }
+    catch(e){ console.warn("barcode:",e); }
+  });
 }
 function line(label,amt,minus){
   return `<div class="summary-line"><span class="${minus?'minus':''}">${label}</span><span class="${minus?'minus':''}">${minus?'-':''}¥${yen(Math.abs(amt))}</span></div>`;
