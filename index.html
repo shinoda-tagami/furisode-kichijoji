@@ -525,6 +525,36 @@ const OAZUKARI = {
   obi:{label:"お預かり（袋帯）",code:"0000167458546"},
   juban:{label:"お預かり（振袖襦袢）",code:"0000167458492"}
 };
+/* 振袖成約バーコード（購入・レンタル共通で表示）*/
+const SEIYAKU_COMMON = [
+  ["成約特典","0000169541277"],
+  ["式支度無料サービス","0000181829896"],
+  ["式お仕度代 17,600","0000181819750"],
+  ["式お仕度代 27,500","0000181819767"],
+  ["式お仕度代 35,200","0000181819774"],
+  ["前撮りヘアメイク着付無料","0000167451776"],
+  ["6切3ポーズ無料","0000167451783"],
+  ["6切1ポーズ無料","0000167451790"],
+  ["卒業袴レンタル 無地無料","0000167451806"],
+  ["卒業袴レンタル ２割引","0000168481468"],
+  ["当日お仕度代 17,600","0000181819729"],
+  ["当日お仕度代 27,500","0000181819736"],
+  ["当日お仕度代 35,200","0000181819743"]
+];
+/* プレタレンタル選択時に追加表示 */
+const SEIYAKU_PRETA = [
+  ["ガードアフター振袖","0000167383565"],
+  ["丸洗い（振袖）CP","0000181120184"],
+  ["丸洗い（振袖襦袢）CP","0000181120351"],
+  ["プレス袋帯","0000181187552"]
+];
+/* トラブルサポート選択時に追加表示 */
+const TROUBLE_PLUS = ["トラブルサポートプラス","0000173553433"];
+/* 半衿バーコード（選択時に表示）*/
+const HANERI_BC = {
+  tsuke:["半衿付け（振袖襦袢）","0000181404949"],
+  kokan:["半衿交換（振袖襦袢）","0000181404956"]
+};
 const MOCHI_KOMONO=[
   {key:"obijime",label:"帯締め"},{key:"obiage",label:"帯揚げ"},{key:"kasane",label:"重ね衿"},
   {key:"zori",label:"草履バッグ"},{key:"shawl",label:"ショール"}
@@ -953,6 +983,7 @@ function calcMochi(){
   }
   const hp=HAN_PRICE[state.han]||0;
   if(hp>0){parts.push(["半衿（"+HAN_LABEL[state.han]+"）",hp]);total+=hp;}
+  if(HANERI_BC[state.han]) barcodes.push(["半衿／"+HANERI_BC[state.han][0], HANERI_BC[state.han][1]]);
   const mShishu=num("mShishu");
   if(mShishu>0){parts.push(["刺繍衿（本体）",mShishu]);total+=mShishu;}
   MOCHI_KOMONO.forEach(k=>{
@@ -1134,16 +1165,31 @@ function showDetail(serial){
     if(r.detail.disc>0)body+=line("割引"+(r.detail.discNote?"（"+escapeHtml(r.detail.discNote)+"）":""),-r.detail.disc,true);
   }
   body+=`<div class="summary-line big"><span>合計（税込）</span><span>¥${yen(r.total)}</span></div>`;
-  if(r.type.indexOf("持込み")>=0 && r.detail && r.detail.barcodes && r.detail.barcodes.length){
-    body+=`<div style="margin-top:16px;font-weight:700;color:var(--pink-d);font-size:14px">🏷 レジ用バーコード（加工）</div>
-      <p class="hint" style="margin-top:2px">加工品は「お預かり（必須）」＋「加工内容」を続けてスキャン／入力してください。</p>`;
-    r.detail.barcodes.forEach(b=>{
+  let bcList=[], bcTitle="", bcHint="";
+  if(r.type.indexOf("持込み")>=0){
+    ((r.detail&&r.detail.barcodes)||[]).forEach(b=>{
       const label=Array.isArray(b)?b[0]:b.label, code=Array.isArray(b)?b[1]:b.code, flag=Array.isArray(b)?b[2]:b.oaz;
-      const oaz=(flag===true)||(label.indexOf("お預かり")>=0);
+      if(code)bcList.push({label:label,code:code,oaz:(flag===true)||(label.indexOf("お預かり")>=0)});
+    });
+    bcTitle="🏷 レジ用バーコード（加工）";
+    bcHint="加工品は「お預かり（必須）」＋「加工内容」を続けてスキャン／入力してください。";
+  }else{
+    SEIYAKU_COMMON.forEach(x=>bcList.push({label:x[0],code:x[1]}));
+    if(r.detail && r.detail.han>0) bcList.push({label:HANERI_BC.tsuke[0],code:HANERI_BC.tsuke[1]});
+    if(r.type.indexOf("プレタ")>=0) SEIYAKU_PRETA.forEach(x=>bcList.push({label:x[0],code:x[1]}));
+    if(r.detail && r.detail.trouble>0) bcList.push({label:TROUBLE_PLUS[0],code:TROUBLE_PLUS[1]});
+    bcTitle="🏷 レジ用バーコード（成約）";
+    bcHint="ご成約時にレジでスキャン／入力してください。該当するものをご利用ください。";
+  }
+  if(bcList.length){
+    body+=`<div style="margin-top:16px;font-weight:700;color:var(--pink-d);font-size:14px">${bcTitle}</div>
+      <p class="hint" style="margin-top:2px">${bcHint}</p>`;
+    bcList.forEach(b=>{
+      const oaz=b.oaz;
       body+=`<div style="text-align:center;margin:8px 0;padding:8px 6px;border:${oaz?'2px solid var(--gold)':'1px solid var(--line)'};border-radius:8px;background:${oaz?'var(--soft)':'#fff'}">
-        <div style="font-size:13px;font-weight:600;margin-bottom:2px">${oaz?'📌 ':''}${escapeHtml(label)}${oaz?' <span style="font-size:11px;color:var(--gold);font-weight:700">必須</span>':''}</div>
-        <svg class="bcimg" data-code="${escapeHtml(code)}"></svg>
-        <div style="font-size:14px;color:var(--ink);letter-spacing:2px;font-family:monospace">${escapeHtml(code)}</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">${oaz?'📌 ':''}${escapeHtml(b.label)}${oaz?' <span style="font-size:11px;color:var(--gold);font-weight:700">必須</span>':''}</div>
+        <svg class="bcimg" data-code="${escapeHtml(b.code)}"></svg>
+        <div style="font-size:14px;color:var(--ink);letter-spacing:2px;font-family:monospace">${escapeHtml(b.code)}</div>
       </div>`;
     });
   }
