@@ -27,12 +27,11 @@ input,select{font-family:inherit;font-size:16px;color:var(--ink)}
 .lock-card .logo{font-size:15px;color:var(--gold);letter-spacing:2px;margin-bottom:4px}
 .lock-card h1{font-size:21px;margin-bottom:2px}
 .lock-card .sub{color:var(--muted);font-size:13px;margin-bottom:22px}
-.pin-display{font-size:30px;letter-spacing:12px;height:44px;color:var(--pink-d);margin-bottom:14px;font-weight:700}
-.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.keypad button{background:var(--soft);color:var(--ink);font-size:22px;padding:16px 0;font-weight:600;
-  transition:.1s}
-.keypad button:active{background:var(--pink);color:#fff}
-.keypad .fn{background:#efe6e0;font-size:15px}
+.pw-input{width:100%;padding:14px;font-size:18px;text-align:center;border:1px solid var(--line);
+  border-radius:10px;margin-bottom:12px;letter-spacing:1px}
+.pw-input:focus{outline:none;border-color:var(--pink)}
+.pw-btn{width:100%;background:var(--pink);color:#fff;padding:14px;font-size:16px;font-weight:700}
+.pw-btn:active{background:var(--pink-d)}
 .lock-err{color:var(--red);font-size:13px;height:18px;margin-top:10px}
 
 /* ---------- Top bar ---------- */
@@ -181,8 +180,9 @@ input,select{font-family:inherit;font-size:16px;color:var(--ink)}
     <div class="logo">MK STYLE</div>
     <h1>振袖見積システム</h1>
     <div class="sub">コピス吉祥寺店</div>
-    <div class="pin-display" id="pinDisp"></div>
-    <div class="keypad" id="keypad"></div>
+    <input type="password" id="pwInput" class="pw-input" placeholder="パスワード" autocomplete="off"
+      autocapitalize="none" spellcheck="false" onkeydown="if(event.key==='Enter')tryUnlock()">
+    <button class="pw-btn" onclick="tryUnlock()">ログイン</button>
     <div class="lock-err" id="lockErr"></div>
   </div>
 </div>
@@ -448,12 +448,12 @@ const PASSWORD = "maruyama08";   // ★パスワード（コピス吉祥寺店�
    ※ここが空のままでも「このiPad内保存」で動作します（共有はされません）。
 ============================================================ */
 const FIREBASE_CONFIG = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyCbwDDVJUW4rQvvjyKrL-tGva8VtMRRDso",
+  authDomain: "kimono-oteire.firebaseapp.com",
+  projectId: "kimono-oteire",
+  storageBucket: "kimono-oteire.firebasestorage.app",
+  messagingSenderId: "895491819627",
+  appId: "1:895491819627:web:6f1c7c33845825fe92492e"
 };
 
 const yen = n => (Math.round(n)||0).toLocaleString("ja-JP");
@@ -549,30 +549,13 @@ freshState();
 /* ============================================================
    ロック画面
 ============================================================ */
-let pin="";
-function buildKeypad(){
-  const kp=$("keypad");
-  const keys=["1","2","3","4","5","6","7","8","9","clr","0","del"];
-  kp.innerHTML="";
-  keys.forEach(k=>{
-    const b=document.createElement("button");
-    if(k==="clr"){b.textContent="C";b.className="fn";b.onclick=()=>{pin="";updPin();}}
-    else if(k==="del"){b.textContent="⌫";b.className="fn";b.onclick=()=>{pin=pin.slice(0,-1);updPin();}}
-    else{b.textContent=k;b.onclick=()=>{if(pin.length<8){pin+=k;updPin();}}}
-    kp.appendChild(b);
-  });
+function tryUnlock(){
+  const v=$("pwInput").value;
+  if(v===PASSWORD){ $("pwInput").value=""; $("lockErr").textContent=""; unlockApp(); }
+  else{ $("lockErr").textContent="パスワードが違います"; $("pwInput").value=""; $("pwInput").focus(); }
 }
-function updPin(){
-  $("pinDisp").textContent="•".repeat(pin.length);
-  $("lockErr").textContent="";
-  if(pin.length>=PASSWORD.length){
-    if(pin===PASSWORD){unlockApp();}
-    else{$("lockErr").textContent="パスワードが違います";pin="";setTimeout(updPin,600);
-      $("pinDisp").textContent="";}
-  }
-}
-function unlockApp(){pin="";$("lock").classList.add("hidden");$("app").classList.remove("hidden");initForm();}
-function lockApp(){pin="";$("pinDisp").textContent="";$("lock").classList.remove("hidden");$("app").classList.add("hidden");}
+function unlockApp(){$("lock").classList.add("hidden");$("app").classList.remove("hidden");initForm();}
+function lockApp(){$("pwInput").value="";$("lockErr").textContent="";$("lock").classList.remove("hidden");$("app").classList.add("hidden");}
 
 /* ============================================================
    タブ
@@ -1276,7 +1259,6 @@ let toastT;
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove("show");},2200);}
 
 /* start */
-buildKeypad();
 initStorage();
 </script>
 </body>
