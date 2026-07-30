@@ -219,7 +219,10 @@ input,select{font-family:inherit;font-size:16px;color:var(--ink)}
         <div class="field"><label>担当（販売員）</label><input type="text" id="fStaff" placeholder="担当者名"></div>
         <div class="field"><label>お客様名</label><input type="text" id="fCustomer" placeholder="お客様名"></div>
       </div>
-      <div class="field"><label>見積有効期限（手入力）</label><input type="text" id="fExpiry" placeholder="例）2026年8月31日まで"></div>
+      <div class="row2">
+        <div class="field"><label>見積有効期限</label><input type="date" id="fExpiry"></div>
+        <div class="field"><label>納期</label><input type="date" id="fDelivery"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -669,7 +672,7 @@ function resetForm(){
   if(!confirm("入力内容をクリアしますか？"))return;
   freshState();
   ["fStaff","fCustomer","fExpiry","basePrice","optShishu","discNote","discAmt",
-   "obiAmt","jubanAmt","mDiscNote","mDiscAmt","mShishu"].forEach(id=>{if($(id))$(id).value="";});
+   "obiAmt","jubanAmt","mDiscNote","mDiscAmt","mShishu","fDelivery"].forEach(id=>{if($(id))$(id).value="";});
   document.querySelectorAll("#planSeg button,#rentalSub button,#obiSeg button,#jubanSeg button,#hanSeg button")
     .forEach(b=>b.classList.remove("on"));
   $("rentalSubWrap").classList.add("hidden");
@@ -1065,7 +1068,7 @@ async function saveEstimate(status){
   const staff=$("fStaff").value.trim();
   const date=$("fDate").value;
   let rec={ storeCode:STORE.code, store:STORE.name, date, staff, customer,
-            expiry:$("fExpiry").value.trim(),
+            expiry:$("fExpiry").value, delivery:$("fDelivery").value,
             status:(isDraft?"draft":"registered"), createdAt:Date.now() };
   if(state.plan==="mochikomi"){
     const c=calcMochi();
@@ -1125,7 +1128,7 @@ async function saveEstimate(status){
 }
 function resetAfterSave(){
   ["fStaff","fCustomer","fExpiry","basePrice","optShishu","discNote","discAmt",
-   "obiAmt","jubanAmt","mDiscNote","mDiscAmt","mShishu"].forEach(id=>{if($(id))$(id).value="";});
+   "obiAmt","jubanAmt","mDiscNote","mDiscAmt","mShishu","fDelivery"].forEach(id=>{if($(id))$(id).value="";});
   freshState();
   document.querySelectorAll("#planSeg button,#rentalSub button,#obiSeg button,#jubanSeg button,#hanSeg button")
     .forEach(b=>b.classList.remove("on"));
@@ -1231,6 +1234,7 @@ function showDetail(serial){
     <div class="detail-head">
       <div><b>${escapeHtml(r.customer)}</b> 様</div>
       <div>日付：${r.date}｜担当：${escapeHtml(r.staff||"—")}</div>
+      <div>有効期限：${r.expiry?fmtJDate(r.expiry):"—"}｜納期：${r.delivery?fmtJDate(r.delivery):"—"}</div>
       <div>プラン：<b>${r.type}</b>｜${r.store}</div>
     </div>
     ${body}
@@ -1296,8 +1300,9 @@ function showEstimateSheet(serial){
     <table class="es-meta">
       <tr><th>お客様名</th><td>${escapeHtml(r.customer)} 様</td></tr>
       <tr><th>見積番号</th><td>${r.serial}</td></tr>
-      <tr><th>発行日</th><td>${r.date}</td></tr>
-      <tr><th>有効期限</th><td>${escapeHtml(r.expiry||"—")}</td></tr>
+      <tr><th>発行日</th><td>${fmtJDate(r.date)}</td></tr>
+      <tr><th>有効期限</th><td>${r.expiry?fmtJDate(r.expiry):"—"}</td></tr>
+      <tr><th>納期</th><td>${r.delivery?fmtJDate(r.delivery):"—"}</td></tr>
       <tr><th>プラン</th><td>${escapeHtml(r.type)}</td></tr>
     </table>
     <table class="es-items">
@@ -1305,7 +1310,7 @@ function showEstimateSheet(serial){
       <tbody>${rows}</tbody>
       <tfoot><tr><td>${totalLabel}</td><td>¥${yen(r.total)}</td></tr></tfoot>
     </table>
-    <div class="es-note">※本お見積りは概算です。お選びいただく商品により金額が変わる場合がございます。${r.expiry?"<br>有効期限："+escapeHtml(r.expiry):""}</div>
+    <div class="es-note">※本お見積りは概算です。お選びいただく商品により金額が変わる場合がございます。${r.expiry?"<br>有効期限："+fmtJDate(r.expiry)+"まで":""}${r.delivery?"　／　納期："+fmtJDate(r.delivery):""}</div>
   </div>`;
   const m=document.createElement("div"); m.className="modal"; m.id="sheetModal";
   m.innerHTML=`<div class="modal-card" style="max-width:640px">
@@ -1354,6 +1359,7 @@ function editEstimate(serial){
   state.editId=serial;
   $("fDate").value=r.date;$("fStaff").value=r.staff||"";$("fCustomer").value=r.customer;$("fSerial").value=r.serial;
   $("fExpiry").value=r.expiry||"";
+  $("fDelivery").value=r.delivery||"";
   const d=r.detail||{};
   if(r.type.indexOf("持込み")>=0){
     setPlan("mochikomi");
@@ -1407,6 +1413,7 @@ function editEstimate(serial){
    ユーティリティ
 ============================================================ */
 function escapeHtml(s){return (s||"").replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function fmtJDate(s){ if(!s)return ""; const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s); return m?(Number(m[1])+"年"+Number(m[2])+"月"+Number(m[3])+"日"):s; }
 let toastT;
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove("show");},2200);}
 
