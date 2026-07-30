@@ -504,8 +504,8 @@ const PLANS = {
 /* 各項目 = [名称, 金額, バーコード]（きものブレイン 2025.10改定・税込） */
 const KAKO = {
   furisode:{
-    "仕立て直し":[["解き",3960,"0000173032198"],["洗い張り",8360,"0000173032181"],["胴裏",22000,"0000182519277"],["八掛",18700,""],["国内仕立て",104500,"0000181097714"],["海外仕立て",44000,"0000181097691"],["ガード加工",17600,"0000181704353"]],
-    "部分直し":[["身丈直し（内揚）",50600,"0000181187705"],["身丈直し（裾）",25300,"0000181624385"],["袖丈直し",17600,"0000181116170"],["袖作り直し",27500,"0000181116729"],["裄直し（肩巾・袖巾）",19800,"0000181116644"],["裄直し（肩巾）",14300,"0000181116569"],["裄直し（袖巾）",14300,"0000181116262"],["胴裏取り換え",49500,"0000181119072"],["胴裏",22000,"0000182519277"],["八掛取り換え",46200,"0000181119133"],["八掛",18700,""],["スジけし",0,""]],
+    "仕立て直し":[["解き",3960,"0000173032198"],["洗い張り",8360,"0000173032181"],["胴裏（特）",22000,"0000182519277"],["胴裏（イ）",20900,"0000182519284"],["胴裏（愛）",19800,"0000182364341"],["八掛",18700,""],["国内仕立て",104500,"0000181097714"],["海外仕立て",44000,"0000181097691"],["ガード加工",17600,"0000181704353"]],
+    "部分直し":[["身丈直し（内揚）",50600,"0000181187705"],["身丈直し（裾）",25300,"0000181624385"],["袖丈直し",17600,"0000181116170"],["袖作り直し",27500,"0000181116729"],["裄直し（肩巾・袖巾）",19800,"0000181116644"],["裄直し（肩巾）",14300,"0000181116569"],["裄直し（袖巾）",14300,"0000181116262"],["胴裏取り換え",49500,"0000181119072"],["胴裏（特）",22000,"0000182519277"],["胴裏（イ）",20900,"0000182519284"],["胴裏（愛）",19800,"0000182364341"],["八掛取り換え",46200,"0000181119133"],["八掛",18700,""],["スジけし",0,""]],
     "洗い":[["丸洗い",9900,"0000181119836"],["汗抜き",7700,"0000181302238"]]
   },
   obi:{
@@ -957,7 +957,7 @@ function calcMochi(){
   const parts=[];let total=0;const barcodes=[];
   const f=sumKakoItem("furisode");
   if(f.sum>0){
-    parts.push(["振袖 加工",f.sum]);total+=f.sum;
+    f.names.forEach(n=>parts.push(["振袖／"+n[0],n[1]]));total+=f.sum;
     barcodes.push(["振袖／"+OAZUKARI.furisode.label,OAZUKARI.furisode.code,true]);
     f.codes.forEach(c=>barcodes.push(["振袖／"+c[0],c[1]]));
   }
@@ -966,7 +966,7 @@ function calcMochi(){
   }else if(state.obi==="mochi"){
     const o=sumKakoItem("obi");
     if(o.sum>0){
-      parts.push(["帯 加工（持ち込み）",o.sum]);total+=o.sum;
+      o.names.forEach(n=>parts.push(["帯／"+n[0],n[1]]));total+=o.sum;
       barcodes.push(["帯／"+OAZUKARI.obi.label,OAZUKARI.obi.code,true]);
       o.codes.forEach(c=>barcodes.push(["帯／"+c[0],c[1]]));
     }
@@ -976,7 +976,7 @@ function calcMochi(){
   }else if(state.juban==="mochi"){
     const j=sumKakoItem("juban");
     if(j.sum>0){
-      parts.push(["長襦袢 加工（持ち込み）",j.sum]);total+=j.sum;
+      j.names.forEach(n=>parts.push(["長襦袢／"+n[0],n[1]]));total+=j.sum;
       barcodes.push(["長襦袢／"+OAZUKARI.juban.label,OAZUKARI.juban.code,true]);
       j.codes.forEach(c=>barcodes.push(["長襦袢／"+c[0],c[1]]));
     }
@@ -1074,6 +1074,18 @@ async function saveEstimate(status){
       parts:c.parts.map(p=>({label:p[0],amt:p[1]})),
       barcodes:c.barcodes.map(b=>({label:b[0],code:b[1],oaz:!!b[2]})),
       discNote:$("mDiscNote").value, disc:c.disc
+    };
+    /* 編集時に選択内容をそのまま復元するためのスナップショット */
+    const mkAmt={}, mkMemo={};
+    MOCHI_KOMONO.forEach(k=>{ mkAmt[k.key]=num("mk_amt_"+k.key); mkMemo[k.key]=($("mk_memo_"+k.key)?$("mk_memo_"+k.key).value:"")||""; });
+    rec.form={
+      mode:"mochikomi",
+      kako:JSON.parse(JSON.stringify(state.kako)),
+      wasou:JSON.parse(JSON.stringify(state.wasou)),
+      obi:state.obi, juban:state.juban, han:state.han,
+      mShishu:num("mShishu"), obiAmt:num("obiAmt"), jubanAmt:num("jubanAmt"),
+      mkAmt:mkAmt, mkMemo:mkMemo,
+      mDiscNote:$("mDiscNote").value, mDiscAmt:num("mDiscAmt")
     };
   }else if(state.plan==="purchase" || (state.plan==="rental" && state.rentalSub)){
     const key=activePlanKey();const c=calcSet();
@@ -1345,7 +1357,32 @@ function editEstimate(serial){
   const d=r.detail||{};
   if(r.type.indexOf("持込み")>=0){
     setPlan("mochikomi");
-    toast("持込みは金額を再入力してください（編集モード）");
+    if(r.form && r.form.mode==="mochikomi"){
+      const fm=r.form;
+      state.kako=JSON.parse(JSON.stringify(fm.kako||{}));
+      ["furisode","obi","juban"].forEach(it=>{
+        if(!state.kako[it])state.kako[it]={cat:null,sel:{},free:[]};
+        if(!state.kako[it].sel)state.kako[it].sel={};
+        if(!state.kako[it].free)state.kako[it].free=[];
+      });
+      if(!state.kako.mk){state.kako.mk={};}
+      MOCHI_KOMONO.forEach(k=>{ if(!state.kako.mk[k.key])state.kako.mk[k.key]="mochi"; });
+      state.wasou=JSON.parse(JSON.stringify(fm.wasou||{setSel:{checked:false,amt:KOMONO_SET_PRICE},free:[]}));
+      state.obi=fm.obi; state.juban=fm.juban; state.han=fm.han||"none";
+      buildKakoLists(); buildMochiKomono(); buildWasou();
+      setObi(state.obi||""); setJuban(state.juban||""); setHan(state.han);
+      $("mShishu").value=fm.mShishu||"";
+      $("obiAmt").value=fm.obiAmt||""; $("jubanAmt").value=fm.jubanAmt||"";
+      MOCHI_KOMONO.forEach(k=>{
+        if($("mk_amt_"+k.key))$("mk_amt_"+k.key).value=(fm.mkAmt&&fm.mkAmt[k.key])?fm.mkAmt[k.key]:"";
+        if($("mk_memo_"+k.key))$("mk_memo_"+k.key).value=(fm.mkMemo&&fm.mkMemo[k.key])||"";
+      });
+      $("mDiscNote").value=fm.mDiscNote||""; $("mDiscAmt").value=fm.mDiscAmt||"";
+      calcMochi();
+      toast("編集モード："+serial);
+    }else{
+      toast("持込みは金額を再入力してください（旧データ）");
+    }
   }else if(d.basePrice!==undefined){
     if(r.type.indexOf("プレタ")>=0){setPlan("rental");setRentalSub("rental_preta");}
     else if(r.type.indexOf("セミオーダー")>=0){setPlan("rental");setRentalSub("rental_order");}
